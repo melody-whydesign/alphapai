@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kinetic Dot-Dash Vector Generator (Aithyra Inspired)</title>
+    <title>Dot-Dash Image Generator</title>
     <style>
         :root {
             --bg-color: #ffffff;
@@ -164,7 +164,7 @@
 <body>
 
     <header>
-        <h1>Aithyra Kinetic Generator</h1>
+        <h1>Dot-Dash Image Generator</h1>
         <p>Transform your subject into a fluid, responsive layout. Click "Animate" to watch the elements scatter, morph, and reconstruct completely horizontally.</p>
     </header>
 
@@ -211,11 +211,11 @@
         const animateBtn = document.getElementById('animateBtn');
 
         let originalImage = null;
-        let vectorElements = []; // Stores all generated elements
+        let vectorElements = []; 
         let animationFrameId = null;
         let isAnimating = false;
-        let animationProgress = 0; // 0 to 1 (scattering out), 1 to 0 (returning home)
-        let animationDirection = 1; // 1 = outward, -1 = inward
+        let animationProgress = 0; 
+        let animationDirection = 1; 
         let holdCounter = 0;
 
         imageLoader.addEventListener('change', handleImage, false);
@@ -229,7 +229,7 @@
             reader.onload = function(event) {
                 originalImage = new Image();
                 originalImage.onload = function() {
-                    const maxDim = 1000; // Slightly optimized resolution constraint for smooth 60fps rendering
+                    const maxDim = 1000; 
                     let width = originalImage.width;
                     let height = originalImage.height;
 
@@ -272,7 +272,7 @@
             const threshold = parseInt(contrastSlider.value);
             
             const baseGap = Math.max(3, rowSpacing * 0.35);
-            vectorElements = []; // Clear array to register fresh elements
+            vectorElements = []; 
 
             for (let y = Math.floor(rowSpacing / 2); y < canvas.height; y += rowSpacing) {
                 let inDrawingSegment = false;
@@ -307,19 +307,14 @@
                     registerElement(segmentStartX, canvas.width, y, rowSpacing);
                 }
             }
-            render(); // Initial static print
+            render(); 
         }
 
-        // Saves coordinates and generates randomized offsets for the motion physics
         function registerElement(startX, endX, y, rowSpacing) {
             const origLength = endX - startX;
             const isInitiallyDot = origLength <= Math.max(4, rowSpacing * 0.4);
             
-            // Random parameters for horizontal displacement/morph behavior
-            // Max offset maps relative to canvas scale
             const maxShiftX = (Math.random() - 0.5) * (canvas.width * 0.35); 
-            
-            // Generate a random length shift (positive or negative) to expand/contract lines morphing into dots or vice versa
             let morphDelta = (Math.random() - 0.5) * 60;
             
             vectorElements.push({
@@ -330,7 +325,6 @@
                 isDot: isInitiallyDot,
                 shiftX: maxShiftX,
                 morph: morphDelta,
-                // Assign a unique speed variable to give that natural non-uniform "scatter" cadence
                 speedModifier: 0.4 + Math.random() * 0.6 
             });
         }
@@ -343,18 +337,15 @@
             ctx.fillStyle = "#000000";
             ctx.lineCap = "round";
 
-            // Easing function for smooth Studio Dumbar style acceleration and deceleration
             const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
             for (let i = 0; i < vectorElements.length; i++) {
                 const el = vectorElements[i];
                 ctx.lineWidth = el.lineWidth;
 
-                // Scale individual progressive tracking based on speed modifier
                 let localProgress = Math.min(1, Math.max(0, animationProgress * el.speedModifier));
                 let currentEase = easeInOutCubic(localProgress);
 
-                // Compute calculated motion state while ensuring movement stays strictly horizontal
                 let currentShift = el.shiftX * currentEase;
                 let currentMorph = el.morph * currentEase;
 
@@ -365,7 +356,6 @@
                 let x1 = newCenterX - newLength / 2;
                 let x2 = newCenterX + newLength / 2;
 
-                // Dynamic classification: if dynamic length drops down small, render it sharply as a dot
                 if (newLength <= Math.max(4, el.lineWidth * 0.7)) {
                     ctx.beginPath();
                     ctx.arc(newCenterX, el.y, ctx.lineWidth / 2, 0, Math.PI * 2);
@@ -405,17 +395,16 @@
             if (holdCounter > 0) {
                 holdCounter--;
             } else {
-                // Advance timing sequence
                 animationProgress += 0.012 * animationDirection;
 
                 if (animationProgress >= 1) {
                     animationProgress = 1;
-                    animationDirection = -1; // Reverse path
-                    holdCounter = 45; // Hold at full abstract scatter for a few frames
+                    animationDirection = -1; 
+                    holdCounter = 45; 
                 } else if (animationProgress <= 0) {
                     animationProgress = 0;
-                    animationDirection = 1; // Restart cycle
-                    holdCounter = 60; // Hold at crisp reconstructed original position
+                    animationDirection = 1; 
+                    holdCounter = 60; 
                 }
             }
 
@@ -425,7 +414,7 @@
 
         downloadBtn.addEventListener('click', () => {
             const link = document.createElement('a');
-            link.download = 'kinetic-dot-dash.png';
+            link.download = 'dot-dash-image.png';
             link.href = canvas.toDataURL('image/png');
             link.click();
         });
