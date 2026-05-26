@@ -1,268 +1,33 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-
-<title>Hybrid Dot–Dash</title>
-
-<style>
-
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:Inter,system-ui;
-}
-
-body{
-
-background:
-linear-gradient(
-180deg,
-#fff,
-#f5f7fa
-);
-
-display:flex;
-justify-content:center;
-
-padding:60px;
-
-color:#111;
-
-}
-
-.container{
-
-width:min(1200px,100%);
-
-}
-
-.hero{
-
-text-align:center;
-
-margin-bottom:40px;
-
-}
-
-h1{
-
-font-size:68px;
-
-font-weight:700;
-
-background:
-linear-gradient(
-90deg,
-#111,
-#555
-);
-
--webkit-background-clip:text;
-
-color:transparent;
-
-}
-
-.subtitle{
-
-color:#666;
-
-margin-top:14px;
-
-}
-
-.panel{
-
-padding:30px;
-
-border-radius:34px;
-
-background:
-rgba(255,255,255,.72);
-
-backdrop-filter:
-blur(40px);
-
-box-shadow:
-0 30px 80px rgba(0,0,0,.08);
-
-}
-
-.controls{
-
-display:flex;
-
-gap:14px;
-
-justify-content:center;
-
-align-items:center;
-
-flex-wrap:wrap;
-
-margin-bottom:28px;
-
-}
-
-.fileWrap{
-
-height:56px;
-
-padding:0 22px;
-
-display:flex;
-
-align-items:center;
-
-background:#f3f4f6;
-
-border-radius:999px;
-
-}
-
-input[type=file]{
-
-font-size:15px;
-
-}
-
-button{
-
-height:56px;
-
-padding:0 26px;
-
-border:none;
-
-border-radius:999px;
-
-cursor:pointer;
-
-font-size:15px;
-
-background:
-linear-gradient(
-90deg,
-#111,
-#444
-);
-
-color:white;
-
-transition:.25s;
-
-}
-
-button:hover{
-
-transform:
-translateY(-2px);
-
-}
-
-canvas{
-
-width:100%;
-
-background:white;
-
-border-radius:24px;
-
-}
-
-.footer{
-
-text-align:center;
-
-margin-top:18px;
-
-color:#777;
-
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="container">
-
-<div class="hero">
-
-<h1>Hybrid Dot–Dash</h1>
-
-<div class="subtitle">
-
-Upload → Generate → Regenerate → Export
-
-</div>
-
-</div>
-
-<div class="panel">
-
-<div class="controls">
-
-<label class="fileWrap">
-
-<input
-id="upload"
-type="file"
-accept="image/*">
-
-</label>
-
-<button id="generate">
-Generate
-</button>
-
-<button id="regen">
-Regenerate
-</button>
-
-<button id="download">
-Export PNG
-</button>
-
-</div>
-
-<canvas id="canvas"></canvas>
-
-</div>
-
-<div class="footer">
-
-Pure white background • Hybrid particle abstraction
-
-</div>
-
-</div>
-
 <script>
 
 const canvas=
-document.getElementById(
-"canvas"
-);
+document.getElementById("canvas");
 
 const ctx=
-canvas.getContext(
-"2d"
-);
+canvas.getContext("2d");
 
 canvas.width=1400;
 canvas.height=1400;
 
-let img=null;
+let image=null;
 
-let seed=
-0;
+let source=null;
+
+let seed=1;
+
+function rng(){
+
+seed=
+(
+seed*
+1664525+
+1013904223
+)%4294967296;
+
+return seed/
+4294967296;
+
+}
 
 function clear(){
 
@@ -273,14 +38,13 @@ ctx.fillRect(
 0,
 0,
 1400,
-1400
-);
+1400);
 
 }
 
 clear();
 
-upload.onchange=e=>{
+upload.onchange=(e)=>{
 
 const file=
 e.target.files[0];
@@ -292,18 +56,18 @@ new FileReader();
 
 reader.onload=()=>{
 
-img=
+image=
 new Image();
 
-img.onload=()=>{
+image.onload=()=>{
 
-clear();
+prepare();
 
 preview();
 
 };
 
-img.src=
+image.src=
 reader.result;
 
 };
@@ -314,37 +78,82 @@ reader.readAsDataURL(file);
 
 function fit(){
 
-let scale=
+const scale=
 Math.min(
-1100/img.width,
-1100/img.height
+1100/image.width,
+1100/image.height
 );
 
 return{
 
 w:
-img.width*
-scale,
+image.width*scale,
 
 h:
-img.height*
-scale,
+image.height*scale,
 
 x:
 (
 1400-
-img.width*
-scale
+image.width*scale
 )/2,
 
 y:
 (
 1400-
-img.height*
-scale
+image.height*scale
 )/2
 
 };
+
+}
+
+function prepare(){
+
+const off=
+document.createElement(
+"canvas"
+);
+
+off.width=
+1400;
+
+off.height=
+1400;
+
+const o=
+off.getContext(
+"2d"
+);
+
+let s=
+fit();
+
+o.fillStyle=
+"#fff";
+
+o.fillRect(
+0,
+0,
+1400,
+1400
+);
+
+o.drawImage(
+image,
+s.x,
+s.y,
+s.w,
+s.h
+);
+
+source=
+o.getImageData(
+0,
+0,
+1400,
+1400
+).data;
 
 }
 
@@ -356,7 +165,7 @@ let s=
 fit();
 
 ctx.drawImage(
-img,
+image,
 s.x,
 s.y,
 s.w,
@@ -366,188 +175,157 @@ s.h
 }
 
 generate.onclick=()=>{
-
 seed=
-Math.random();
-
+Date.now();
 render();
-
 };
 
 regen.onclick=()=>{
-
-if(!img)return;
-
-seed=
-Math.random();
-
+if(!image)return;
+seed+=1;
 render();
+};
+
+function sample(x,y){
+
+let i=
+(
+Math.floor(y)
+*
+1400+
+Math.floor(x)
+)
+*4;
+
+return{
+
+r:
+source[i],
+
+g:
+source[i+1],
+
+b:
+source[i+2]
 
 };
 
-function random(){
+}
 
-seed=
-(
-seed*
-9301+
-49297
-)%233280;
+function luminance(
+r,
+g,
+b
+){
 
-return seed/
-233280;
+return
+0.2126*r+
+0.7152*g+
+0.0722*b;
 
 }
 
 function render(){
 
-if(!img)return;
+if(!image)return;
 
 clear();
 
-const temp=
-document.createElement(
-"canvas"
-);
-
-temp.width=
-1400;
-
-temp.height=
-1400;
-
-const t=
-temp.getContext(
-"2d"
-);
-
-let s=
-fit();
-
-t.drawImage(
-img,
-s.x,
-s.y,
-s.w,
-s.h
-);
-
-let data=
-t.getImageData(
-0,
-0,
-1400,
-1400
-).data;
+const COUNT=
+90000;
 
 for(
-
-let y=0;
-
-y<1400;
-
-y+=7
-
+let n=0;
+n<COUNT;
+n++
 ){
 
-for(
+let x=
+rng()*1400;
 
-let x=0;
+let y=
+rng()*1400;
 
-x<1400;
-
-x+=7
-
-){
-
-let i=
-(
-y*
-1400+
-x
-)
-*4;
-
-let r=
-data[i];
-
-let g=
-data[i+1];
-
-let b=
-data[i+2];
-
-let brightness=
-(
-r+
-g+
-b
-)/3;
+let c=
+sample(
+x,
+y
+);
 
 if(
-brightness>
-245
+c.r>248&&
+c.g>248&&
+c.b>248
 )
 continue;
 
-let density=
-(
-255-
-brightness
-)/255;
+let l=
+luminance(
+c.r,
+c.g,
+c.b
+);
+
+let darkness=
+1-
+l/255;
+
+let probability=
+
+0.02+
+
+darkness*
+0.98;
 
 if(
-random()
+rng()
 >
-density*
-0.55
+probability
 )
 continue;
 
 ctx.fillStyle=
-`rgb(${r},${g},${b})`;
-
-let size=
-
-6+
-density*
-18;
+`rgb(
+${c.r},
+${c.g},
+${c.b}
+)`;
 
 let type=
-random();
+rng();
 
-let dx=
+let px=
+x+
 (
-random()-
-.5
-)
-*8;
+rng()-.5
+)*6;
 
-let dy=
+let py=
+y+
 (
-random()-
-.5
-)
-*8;
+rng()-.5
+)*6;
 
 if(
 type<
-0.30
+0.35
 ){
+
+let r=
+
+0.8+
+
+darkness*
+5;
 
 ctx.beginPath();
 
 ctx.arc(
-
-x+dx,
-y+dy,
-
-size*.6,
-
+px,
+py,
+r,
 0,
-
 7
-
 );
 
 ctx.fill();
@@ -556,30 +334,47 @@ ctx.fill();
 
 else{
 
-let w=
-
-size*
-(
-1+
-random()*4
-);
-
 let h=
 
-size*
+1.8+
+
+darkness*
+5;
+
+let w=
+
+h*
 (
-0.45+
-random()*.6
+2+
+rng()*5
+);
+
+let angle=
+
+(
+rng()-.5
+)
+*.12;
+
+ctx.save();
+
+ctx.translate(
+px,
+py
+);
+
+ctx.rotate(
+angle
 );
 
 capsule(
-x+dx,
-y+dy,
+-w/2,
+-h/2,
 w,
 h
 );
 
-}
+ctx.restore();
 
 }
 
@@ -596,13 +391,38 @@ h
 
 ctx.beginPath();
 
-ctx.roundRect(
-x,
-y,
-w,
-h,
-h
+ctx.moveTo(
+x+h/2,
+y
 );
+
+ctx.lineTo(
+x+w-h/2,
+y
+);
+
+ctx.arc(
+x+w-h/2,
+y+h/2,
+h/2,
+-Math.PI/2,
+Math.PI/2
+);
+
+ctx.lineTo(
+x+h/2,
+y+h
+);
+
+ctx.arc(
+x+h/2,
+y+h/2,
+h/2,
+Math.PI/2,
+-Math.PI/2
+);
+
+ctx.closePath();
 
 ctx.fill();
 
@@ -610,23 +430,21 @@ ctx.fill();
 
 download.onclick=()=>{
 
-const a=
+let a=
 document.createElement(
 "a"
 );
 
 a.href=
-canvas.toDataURL();
+canvas.toDataURL(
+"image/png"
+);
 
 a.download=
-"hybrid-dot-dash.png";
+"particle-raster.png";
 
 a.click();
 
 };
 
 </script>
-
-</body>
-
-</html>
