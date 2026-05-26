@@ -169,17 +169,17 @@
 
             <div class="control-group">
                 <label for="resolutionRow">Line Spacing</label>
-                <input type="range" id="resolutionRow" min="6" max="24" value="12" step="2">
+                <input type="range" id="resolutionRow" min="6" max="24" value="12" step="1">
             </div>
 
             <div class="control-group">
-                <label for="dotBiasSlider">Dot Density Preference</label>
-                <input type="range" id="dotBiasSlider" min="1" max="10" value="7" step="1">
+                <label for="dotBiasSlider">Dot Ratio (Higher = More Dots)</label>
+                <input type="range" id="dotBiasSlider" min="1" max="10" value="6" step="1">
             </div>
 
             <div class="control-group">
                 <label for="contrastThreshold">Contrast Threshold</label>
-                <input type="range" id="contrastThreshold" min="0" max="255" value="140">
+                <input type="range" id="contrastThreshold" min="10" max="245" value="128">
             </div>
             
             <button id="downloadBtn" class="btn-download">Download Image</button>
@@ -251,7 +251,7 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             const rowSpacing = parseInt(resSlider.value); 
-            const dotBias = parseInt(dotBiasSlider.value); // Higher values increase dot distribution 
+            const dotBias = parseInt(dotBiasSlider.value); 
             const threshold = parseInt(contrastSlider.value);
             
             ctx.strokeStyle = "#000000";
@@ -259,12 +259,17 @@
             ctx.lineCap = "round"; 
             ctx.lineWidth = rowSpacing * 0.55; 
 
-            for (let y = rowSpacing / 2; y < canvas.height; y += rowSpacing) {
+            // Dynamic geometric layout values that scale cleanly with line spacing
+            const baseGap = Math.max(3, rowSpacing * 0.35);
+
+            for (let y = Math.floor(rowSpacing / 2); y < canvas.height; y += rowSpacing) {
                 let inDrawingSegment = false;
                 let segmentStartX = 0;
 
                 for (let x = 0; x < canvas.width; x++) {
                     const idx = (Math.floor(y) * canvas.width + x) * 4;
+                    if (idx >= pixels.length) break;
+
                     const r = pixels[idx];
                     const g = pixels[idx + 1];
                     const b = pixels[idx + 2];
@@ -272,43 +277,44 @@
                     const brightness = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
                     if (brightness < threshold) {
-                        // Map brightness value to an adaptive maximum allowed length for this specific segment.
-                        // Darker pixels allow longer dashes; mid-tones restrict length severely to create dots.
-                        const normalizedDarkness = (threshold - brightness) / threshold; // 0 (midtone) to 1 (pure black)
+                        // RE-ENGINEERED LINEAR SHATTER LOGIC:
+                        // Instead of exponential powers that crash, we map darkness to a reliable multiplier.
+                        const darknessFactor = (threshold - brightness) / threshold; 
                         
-                        // Lower numbers here clamp the mid-tones down to dot structures
-                        const adaptiveMaxDash = Math.max(2, Math.pow(normalizedDarkness, 11 - dotBias) * 120);
+                        // Higher dot bias values clamp down the allowed line length drastically
+                        const maxAllowedDash = Math.max(1, (darknessFactor * 100) / (dotBias * 0.7));
 
                         if (!inDrawingSegment) {
                             inDrawingSegment = true;
                             segmentStartX = x;
-                        } else if ((x - segmentStartX) >= adaptiveMaxDash) {
-                            // Hit the algorithmic ceiling for this shade density, output element and reset
-                            drawSegment(segmentStartX, x, y);
-                            x += Math.max(3, rowSpacing * 0.4); // Clean mathematical whitespace gap
+                        } else if ((x - segmentStartX) >= maxAllowedDash) {
+                            // Hit the solid pixel limit for this gradient area, print element
+                            drawSegment(segmentStartX, x, y, rowSpacing);
+                            x += Math.floor(baseGap); // Step forward cleanly over whitespace
                             inDrawingSegment = false;
                         }
                     } else {
                         if (inDrawingSegment) {
-                            drawSegment(segmentStartX, x, y);
+                            drawSegment(segmentStartX, x, y, rowSpacing);
                             inDrawingSegment = false;
                         }
                     }
                 }
                 if (inDrawingSegment) {
-                    drawSegment(segmentStartX, canvas.width, y);
+                    drawSegment(segmentStartX, canvas.width, y, rowSpacing);
                 }
             }
         }
 
-        function drawSegment(startX, endX, y) {
+        function drawSegment(startX, endX, y, rowSpacing) {
             const length = endX - startX;
-            // If the segment length is compressed or naturally short, render a geometric circle (dot)
-            if (length <= 5) {
+            // If the chunk is short, draw a clean mathematical dot
+            if (length <= Math.max(4, rowSpacing * 0.4)) {
                 ctx.beginPath();
                 ctx.arc(startX + length / 2, y, ctx.lineWidth / 2, 0, Math.PI * 2);
                 ctx.fill();
             } else {
+                // Otherwise draw a perfect vector line segment with rounded caps
                 ctx.beginPath();
                 ctx.moveTo(startX, y);
                 ctx.lineTo(endX, y);
@@ -318,7 +324,7 @@
 
         downloadBtn.addEventListener('click', () => {
             const link = document.createElement('a');
-            link.download = 'dot-dash-minimal.png';
+            link.download = 'consistent-dot-dash.png';
             link.href = canvas.toDataURL('image/png');
             link.click();
         });
