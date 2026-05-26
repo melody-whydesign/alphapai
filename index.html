@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minimalist Dot-Dash Vector Generator</title>
+    <title>Dynamic Dot-Dash Vector Generator</title>
     <style>
         :root {
             --bg-color: #ffffff;
@@ -156,7 +156,7 @@
 
     <header>
         <h1>Dot-Dash Minimalist Generator</h1>
-        <p>Upload an image to transform it into a high-contrast horizontal vector pattern composed strictly of rounded dashes, segments, and dots.</p>
+        <p>A balanced algorithmic transformation. High-density areas form dashes, while mid-tones and transitions naturally break down into pure minimalist dots.</p>
     </header>
 
     <div class="container">
@@ -173,13 +173,13 @@
             </div>
 
             <div class="control-group">
-                <label for="maxDashSlider">Max Dash Length (Lower = More Dots)</label>
-                <input type="range" id="maxDashSlider" min="2" max="60" value="15" step="1">
+                <label for="dotBiasSlider">Dot Density Preference</label>
+                <input type="range" id="dotBiasSlider" min="1" max="10" value="7" step="1">
             </div>
 
             <div class="control-group">
-                <label for="contrastThreshold">Contrast / Threshold</label>
-                <input type="range" id="contrastThreshold" min="0" max="255" value="128">
+                <label for="contrastThreshold">Contrast Threshold</label>
+                <input type="range" id="contrastThreshold" min="0" max="255" value="140">
             </div>
             
             <button id="downloadBtn" class="btn-download">Download Image</button>
@@ -195,7 +195,7 @@
         const canvas = document.getElementById('imageCanvas');
         const ctx = canvas.getContext('2d');
         const resSlider = document.getElementById('resolutionRow');
-        const maxDashSlider = document.getElementById('maxDashSlider');
+        const dotBiasSlider = document.getElementById('dotBiasSlider');
         const contrastSlider = document.getElementById('contrastThreshold');
         const downloadBtn = document.getElementById('downloadBtn');
 
@@ -203,7 +203,7 @@
 
         imageLoader.addEventListener('change', handleImage, false);
         resSlider.addEventListener('input', processImage);
-        maxDashSlider.addEventListener('input', processImage);
+        dotBiasSlider.addEventListener('input', processImage);
         contrastSlider.addEventListener('input', processImage);
 
         function handleImage(e) {
@@ -251,16 +251,13 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             const rowSpacing = parseInt(resSlider.value); 
-            const maxDash = parseInt(maxDashSlider.value);
+            const dotBias = parseInt(dotBiasSlider.value); // Higher values increase dot distribution 
             const threshold = parseInt(contrastSlider.value);
             
             ctx.strokeStyle = "#000000";
             ctx.fillStyle = "#000000";
             ctx.lineCap = "round"; 
-            ctx.lineWidth = rowSpacing * 0.6; // Slightly thinner line to make gaps/dots more pronounced
-
-            // A tiny gap value to split the lines rhythmically
-            const breakGap = Math.max(2, rowSpacing * 0.3);
+            ctx.lineWidth = rowSpacing * 0.55; 
 
             for (let y = rowSpacing / 2; y < canvas.height; y += rowSpacing) {
                 let inDrawingSegment = false;
@@ -275,17 +272,21 @@
                     const brightness = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
                     if (brightness < threshold) {
+                        // Map brightness value to an adaptive maximum allowed length for this specific segment.
+                        // Darker pixels allow longer dashes; mid-tones restrict length severely to create dots.
+                        const normalizedDarkness = (threshold - brightness) / threshold; // 0 (midtone) to 1 (pure black)
+                        
+                        // Lower numbers here clamp the mid-tones down to dot structures
+                        const adaptiveMaxDash = Math.max(2, Math.pow(normalizedDarkness, 11 - dotBias) * 120);
+
                         if (!inDrawingSegment) {
                             inDrawingSegment = true;
                             segmentStartX = x;
-                        } else {
-                            // If the current dash length exceeds our allowed max limit, 
-                            // force-draw it right now and create a tiny geometric gap to start a new segment.
-                            if ((x - segmentStartX) >= maxDash) {
-                                drawSegment(segmentStartX, x, y);
-                                x += Math.floor(breakGap); // Skip forward slightly to insert a clear visual gap
-                                inDrawingSegment = false;
-                            }
+                        } else if ((x - segmentStartX) >= adaptiveMaxDash) {
+                            // Hit the algorithmic ceiling for this shade density, output element and reset
+                            drawSegment(segmentStartX, x, y);
+                            x += Math.max(3, rowSpacing * 0.4); // Clean mathematical whitespace gap
+                            inDrawingSegment = false;
                         }
                     } else {
                         if (inDrawingSegment) {
@@ -301,10 +302,11 @@
         }
 
         function drawSegment(startX, endX, y) {
-            // If the segment length is tiny, or matches a very low maxDash limit, force a true circular dot
-            if ((endX - startX) <= 3) {
+            const length = endX - startX;
+            // If the segment length is compressed or naturally short, render a geometric circle (dot)
+            if (length <= 5) {
                 ctx.beginPath();
-                ctx.arc(startX + (endX - startX)/2, y, ctx.lineWidth / 2, 0, Math.PI * 2);
+                ctx.arc(startX + length / 2, y, ctx.lineWidth / 2, 0, Math.PI * 2);
                 ctx.fill();
             } else {
                 ctx.beginPath();
@@ -316,7 +318,7 @@
 
         downloadBtn.addEventListener('click', () => {
             const link = document.createElement('a');
-            link.download = 'dot-dash-pattern.png';
+            link.download = 'dot-dash-minimal.png';
             link.href = canvas.toDataURL('image/png');
             link.click();
         });
