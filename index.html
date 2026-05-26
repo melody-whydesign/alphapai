@@ -14,17 +14,14 @@
 margin:0;
 padding:0;
 box-sizing:border-box;
-font-family:
-Inter,
-system-ui;
+font-family:Inter,system-ui;
 }
 
 body{
-
 background:
 linear-gradient(
 180deg,
-#ffffff,
+#fff,
 #f5f7fa
 );
 
@@ -33,36 +30,26 @@ padding:60px;
 display:flex;
 
 justify-content:center;
-
 }
 
 .container{
-
 width:min(1200px,100%);
-
 }
 
 .hero{
-
 text-align:center;
-
-margin-bottom:42px;
-
+margin-bottom:40px;
 }
 
 h1{
 
-font-size:70px;
-
-font-weight:700;
-
-letter-spacing:-2px;
+font-size:72px;
 
 background:
 linear-gradient(
 90deg,
 #111,
-#666
+#555
 );
 
 -webkit-background-clip:text;
@@ -72,11 +59,8 @@ color:transparent;
 }
 
 .sub{
-
-margin-top:14px;
-
 color:#777;
-
+margin-top:12px;
 }
 
 .panel{
@@ -89,7 +73,7 @@ blur(40px);
 
 padding:28px;
 
-border-radius:34px;
+border-radius:32px;
 
 box-shadow:
 0 20px 80px rgba(0,0,0,.08);
@@ -104,8 +88,6 @@ gap:14px;
 
 justify-content:center;
 
-align-items:center;
-
 flex-wrap:wrap;
 
 margin-bottom:24px;
@@ -114,23 +96,17 @@ margin-bottom:24px;
 
 .file{
 
-background:#f3f4f7;
-
 height:56px;
+
+padding:0 22px;
 
 display:flex;
 
 align-items:center;
 
-padding:0 22px;
+background:#f3f4f6;
 
 border-radius:999px;
-
-}
-
-input{
-
-font-size:14px;
 
 }
 
@@ -155,15 +131,6 @@ color:white;
 
 cursor:pointer;
 
-font-size:15px;
-
-}
-
-button:hover{
-
-transform:
-translateY(-2px);
-
 }
 
 canvas{
@@ -172,7 +139,7 @@ width:100%;
 
 background:white;
 
-border-radius:26px;
+border-radius:24px;
 
 display:block;
 
@@ -215,28 +182,22 @@ Upload → Generate → Regenerate → Export
 <label class="file">
 
 <input
-type="file"
 id="upload"
+type="file"
 accept="image/*">
 
 </label>
 
 <button id="generate">
-
 Generate
-
 </button>
 
 <button id="regen">
-
 Regenerate
-
 </button>
 
 <button id="save">
-
 Export PNG
-
 </button>
 
 </div>
@@ -247,7 +208,7 @@ Export PNG
 
 <div class="footer">
 
-Minimal generative particle raster
+Generative particle raster
 
 </div>
 
@@ -256,42 +217,33 @@ Minimal generative particle raster
 <script>
 
 const canvas=
-document.getElementById(
-"canvas"
-);
+document.getElementById("canvas");
 
 const ctx=
-canvas.getContext(
-"2d"
-);
+canvas.getContext("2d");
 
-canvas.width=
-1600;
+canvas.width=1600;
+canvas.height=1600;
 
-canvas.height=
-1600;
-
-let img=null;
-
-let buffer=null;
-
+let image=null;
+let imageData=null;
 let seed=1;
 
-function rnd(){
+function rand(){
 
 seed=
 (
 seed*
-9301+
-49297
-)%233280;
+16807
+)%2147483647;
 
-return seed/
-233280;
+return(
+seed-1
+)/2147483646;
 
 }
 
-function white(){
+function clear(){
 
 ctx.fillStyle=
 "#fff";
@@ -305,61 +257,56 @@ canvas.height
 
 }
 
-white();
+clear();
 
 function fit(){
 
-let s=
+const scale=
 Math.min(
-1200/img.width,
-1200/img.height
+1200/image.width,
+1200/image.height
 );
 
 return{
 
 w:
-img.width*s,
+image.width*scale,
 
 h:
-img.height*s,
+image.height*scale,
 
 x:
 (
 1600-
-img.width*s
+image.width*scale
 )/2,
 
 y:
 (
 1600-
-img.height*s
+image.height*scale
 )/2
 
 };
 
 }
 
-document
-.getElementById(
-"upload"
-)
-.onchange=e=>{
+upload.onchange=e=>{
 
-let file=
+const file=
 e.target.files[0];
 
-if(!file)
-return;
+if(!file)return;
 
-let r=
+const reader=
 new FileReader();
 
-r.onload=()=>{
+reader.onload=()=>{
 
-img=
+image=
 new Image();
 
-img.onload=()=>{
+image.onload=()=>{
 
 prepare();
 
@@ -367,12 +314,12 @@ preview();
 
 };
 
-img.src=
-r.result;
+image.src=
+reader.result;
 
 };
 
-r.readAsDataURL(
+reader.readAsDataURL(
 file
 );
 
@@ -380,73 +327,73 @@ file
 
 function prepare(){
 
-let off=
+const temp=
 document.createElement(
 "canvas"
 );
 
-off.width=
+temp.width=
 1600;
 
-off.height=
+temp.height=
 1600;
 
-let o=
-off.getContext(
+const t=
+temp.getContext(
 "2d"
 );
 
-o.fillStyle=
+t.fillStyle=
 "#fff";
 
-o.fillRect(
+t.fillRect(
 0,
 0,
 1600,
 1600
 );
 
-let f=
+const s=
 fit();
 
-o.drawImage(
-img,
-f.x,
-f.y,
-f.w,
-f.h
+t.drawImage(
+image,
+s.x,
+s.y,
+s.w,
+s.h
 );
 
-buffer=
-o.getImageData(
+imageData=
+t.getImageData(
 0,
 0,
 1600,
 1600
-).data;
+);
 
 }
 
 function preview(){
 
-white();
+clear();
 
-let f=
+const s=
 fit();
 
 ctx.drawImage(
-img,
-f.x,
-f.y,
-f.w,
-f.h
+image,
+s.x,
+s.y,
+s.w,
+s.h
 );
 
 }
 
-function get(x,y){
+function pixel(x,y){
 
-let i=
+const i=
 (
 (
 y|0
@@ -459,115 +406,83 @@ x|0
 )
 *4;
 
+const d=
+imageData.data;
+
 return{
 
-r:
-buffer[i],
-
-g:
-buffer[i+1],
-
-b:
-buffer[i+2]
+r:d[i],
+g:d[i+1],
+b:d[i+2]
 
 };
 
 }
 
-function lum(
-r,
-g,
-b
-){
-
-return
-(
-r+
-g+
-b
-)/3;
-
-}
-
-function capsule(
-x,
-y,
-w,
-h
-){
-
-ctx.beginPath();
-
-ctx.roundRect(
-x,
-y,
-w,
-h,
-h
-);
-
-ctx.fill();
-
-}
-
 function render(){
 
-if(!img)
+if(!imageData)
 return;
 
-white();
-
-const COUNT=
-110000;
+clear();
 
 for(
 
 let i=0;
 
-i<COUNT;
+i<140000;
 
 i++
 
 ){
 
 let x=
-rnd()*1600;
+rand()*1600;
 
 let y=
-rnd()*1600;
+rand()*1600;
 
-let c=
-get(
+let p=
+pixel(
 x,
 y
 );
 
 if(
-c.r>245&&
-c.g>245&&
-c.b>245
+
+p.r>248&&
+p.g>248&&
+p.b>248
+
 )
+
 continue;
 
-let d=
+let bright=
+
+(
+p.r+
+p.g+
+p.b
+)/3;
+
+let dark=
 
 1-
-(
-lum(
-c.r,
-c.g,
-c.b
-)
-/255
-);
+bright/
+255;
+
+/* keep more particles */
 
 if(
 
-rnd()
->
+rand()>
 
-0.03+
-d
+(
+0.35+
+dark*
+0.65
+)
 
 )
 
@@ -575,72 +490,103 @@ continue;
 
 ctx.fillStyle=
 `rgb(
-${c.r},
-${c.g},
-${c.b}
+${p.r},
+${p.g},
+${p.b}
 )`;
 
-/* mostly dashes */
+/* DOT */
 
 if(
-rnd()<0.25
+rand()<0.28
 ){
-
-let r=
-
-1+
-
-d*5;
 
 ctx.beginPath();
 
 ctx.arc(
-x,
-y,
-r,
+
+x+
+(
+rand()-.5
+)*8,
+
+y+
+(
+rand()-.5
+)*8,
+
+1+
+dark*7,
+
 0,
+
 7
+
 );
 
 ctx.fill();
 
 }
 
+/* DASH */
+
 else{
 
 let h=
 
-1.5+
-d*7;
+2+
+dark*8;
 
 let w=
 
 h*
 (
-1.5+
-rnd()*7
+2+
+rand()*6
 );
 
 ctx.save();
 
 ctx.translate(
-x,
-y
+
+x+
+(
+rand()-.5
+)*8,
+
+y+
+(
+rand()-.5
+)*8
+
 );
 
 ctx.rotate(
+
 (
-rnd()-.5
+rand()-.5
 )
 *.08
+
 );
 
-capsule(
+ctx.beginPath();
+
+ctx.roundRect(
+
 -w/2,
+
 -h/2,
+
 w,
+
+h,
+
 h
+
 );
+
+ctx.fill();
 
 ctx.restore();
 
@@ -650,11 +596,7 @@ ctx.restore();
 
 }
 
-document
-.getElementById(
-"generate"
-)
-.onclick=()=>{
+generate.onclick=()=>{
 
 seed=
 Date.now();
@@ -663,25 +605,17 @@ render();
 
 };
 
-document
-.getElementById(
-"regen"
-)
-.onclick=()=>{
+regen.onclick=()=>{
 
-seed+=7;
+seed+=100;
 
 render();
 
 };
 
-document
-.getElementById(
-"save"
-)
-.onclick=()=>{
+save.onclick=()=>{
 
-let a=
+const a=
 document.createElement(
 "a"
 );
@@ -690,7 +624,7 @@ a.href=
 canvas.toDataURL();
 
 a.download=
-"hybrid-raster.png";
+"hybrid-dot-dash.png";
 
 a.click();
 
