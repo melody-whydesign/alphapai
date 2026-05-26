@@ -1,145 +1,166 @@
 <script>
 
-const canvas=
+const canvas =
 document.getElementById("canvas");
 
-const ctx=
+const ctx =
 canvas.getContext("2d");
 
-canvas.width=1400;
-canvas.height=1400;
+canvas.width = 1400;
+canvas.height = 1400;
 
-let image=null;
+const upload =
+document.getElementById("upload");
 
-let source=null;
+const generate =
+document.getElementById("generate");
 
-let seed=1;
+const regen =
+document.getElementById("regen");
 
-function rng(){
+const download =
+document.getElementById("download");
 
-seed=
+let image = null;
+let sourceData = null;
+let randomSeed = 1;
+
+function random(){
+
+randomSeed =
 (
-seed*
-1664525+
-1013904223
-)%4294967296;
+randomSeed*
+16807
+)%2147483647;
 
-return seed/
-4294967296;
+return (
+randomSeed-1
+)/2147483646;
 
 }
 
 function clear(){
 
-ctx.fillStyle=
+ctx.fillStyle =
 "#fff";
 
 ctx.fillRect(
 0,
 0,
-1400,
-1400);
+canvas.width,
+canvas.height
+);
 
 }
 
 clear();
 
-upload.onchange=(e)=>{
+function fitImage(w,h){
 
-const file=
-e.target.files[0];
-
-if(!file)return;
-
-const reader=
-new FileReader();
-
-reader.onload=()=>{
-
-image=
-new Image();
-
-image.onload=()=>{
-
-prepare();
-
-preview();
-
-};
-
-image.src=
-reader.result;
-
-};
-
-reader.readAsDataURL(file);
-
-};
-
-function fit(){
-
-const scale=
+const scale =
 Math.min(
-1100/image.width,
-1100/image.height
+1100/w,
+1100/h
 );
 
 return{
 
 w:
-image.width*scale,
+w*scale,
 
 h:
-image.height*scale,
+h*scale,
 
 x:
 (
 1400-
-image.width*scale
+w*scale
 )/2,
 
 y:
 (
 1400-
-image.height*scale
+h*scale
 )/2
 
 };
 
 }
 
-function prepare(){
+upload.addEventListener(
+"change",
+e=>{
 
-const off=
+const file =
+e.target.files[0];
+
+if(!file)return;
+
+const reader =
+new FileReader();
+
+reader.onload =
+ev=>{
+
+image =
+new Image();
+
+image.onload =
+()=>{
+
+buildSource();
+
+preview();
+
+};
+
+image.src =
+ev.target.result;
+
+};
+
+reader.readAsDataURL(
+file
+);
+
+}
+);
+
+function buildSource(){
+
+const temp =
 document.createElement(
 "canvas"
 );
 
-off.width=
+temp.width =
 1400;
 
-off.height=
+temp.height =
 1400;
 
-const o=
-off.getContext(
+const t =
+temp.getContext(
 "2d"
 );
 
-let s=
-fit();
-
-o.fillStyle=
+t.fillStyle =
 "#fff";
 
-o.fillRect(
+t.fillRect(
 0,
 0,
 1400,
 1400
 );
 
-o.drawImage(
+const s =
+fitImage(
+image.width,
+image.height
+);
+
+t.drawImage(
 image,
 s.x,
 s.y,
@@ -147,13 +168,13 @@ s.w,
 s.h
 );
 
-source=
-o.getImageData(
+sourceData =
+t.getImageData(
 0,
 0,
 1400,
 1400
-).data;
+);
 
 }
 
@@ -161,8 +182,11 @@ function preview(){
 
 clear();
 
-let s=
-fit();
+const s =
+fitImage(
+image.width,
+image.height
+);
 
 ctx.drawImage(
 image,
@@ -174,21 +198,9 @@ s.h
 
 }
 
-generate.onclick=()=>{
-seed=
-Date.now();
-render();
-};
-
-regen.onclick=()=>{
-if(!image)return;
-seed+=1;
-render();
-};
-
 function sample(x,y){
 
-let i=
+const i =
 (
 Math.floor(y)
 *
@@ -197,135 +209,176 @@ Math.floor(x)
 )
 *4;
 
+const d =
+sourceData.data;
+
 return{
 
-r:
-source[i],
-
-g:
-source[i+1],
-
-b:
-source[i+2]
+r:d[i],
+g:d[i+1],
+b:d[i+2]
 
 };
 
 }
 
-function luminance(
+function brightness(
 r,
 g,
 b
 ){
 
-return
-0.2126*r+
-0.7152*g+
-0.0722*b;
+return (
+r+
+g+
+b
+)/3;
+
+}
+
+function drawCapsule(
+x,
+y,
+w,
+h
+){
+
+ctx.beginPath();
+
+ctx.roundRect(
+x,
+y,
+w,
+h,
+h
+);
+
+ctx.fill();
 
 }
 
 function render(){
 
-if(!image)return;
+if(!sourceData)
+return;
 
 clear();
 
-const COUNT=
-90000;
+const PARTICLES =
+85000;
 
 for(
-let n=0;
-n<COUNT;
-n++
+
+let i=0;
+
+i<PARTICLES;
+
+i++
+
 ){
 
-let x=
-rng()*1400;
+let x =
+random()
+*
+1400;
 
-let y=
-rng()*1400;
+let y =
+random()
+*
+1400;
 
-let c=
+const c =
 sample(
 x,
 y
 );
 
 if(
+
 c.r>248&&
 c.g>248&&
 c.b>248
+
 )
+
 continue;
 
-let l=
-luminance(
+const l =
+brightness(
 c.r,
 c.g,
 c.b
 );
 
-let darkness=
+const darkness =
 1-
-l/255;
-
-let probability=
-
-0.02+
-
-darkness*
-0.98;
+(
+l/255
+);
 
 if(
-rng()
+
+random()
 >
-probability
+(
+darkness*
+0.95+
+0.04
 )
+
+)
+
 continue;
 
-ctx.fillStyle=
+ctx.fillStyle =
 `rgb(
 ${c.r},
 ${c.g},
 ${c.b}
 )`;
 
-let type=
-rng();
+/* LARGE PARTICLES */
 
-let px=
-x+
-(
-rng()-.5
-)*6;
+const base =
 
-let py=
-y+
+1.2+
+
+darkness*
+9;
+
+const type =
+random();
+
+x +=
 (
-rng()-.5
-)*6;
+random()-.5
+)
+*8;
+
+y +=
+(
+random()-.5
+)
+*8;
 
 if(
 type<
-0.35
+0.32
 ){
-
-let r=
-
-0.8+
-
-darkness*
-5;
 
 ctx.beginPath();
 
 ctx.arc(
-px,
-py,
-r,
+
+x,
+y,
+
+base*.55,
+
 0,
-7
+
+Math.PI*2
+
 );
 
 ctx.fill();
@@ -334,44 +387,49 @@ ctx.fill();
 
 else{
 
-let h=
+let h =
 
-1.8+
+base*
+(
+0.7+
+random()
+);
 
-darkness*
-5;
-
-let w=
+let w =
 
 h*
 (
 2+
-rng()*5
+random()*5
 );
-
-let angle=
-
-(
-rng()-.5
-)
-*.12;
 
 ctx.save();
 
 ctx.translate(
-px,
-py
+x,
+y
 );
 
 ctx.rotate(
-angle
+
+(
+random()-.5
+)
+*
+0.08
+
 );
 
-capsule(
+drawCapsule(
+
 -w/2,
+
 -h/2,
+
 w,
+
 h
+
 );
 
 ctx.restore();
@@ -382,65 +440,42 @@ ctx.restore();
 
 }
 
-function capsule(
-x,
-y,
-w,
-h
-){
+generate.onclick=
+()=>{
 
-ctx.beginPath();
+randomSeed=
+Date.now();
 
-ctx.moveTo(
-x+h/2,
-y
-);
+render();
 
-ctx.lineTo(
-x+w-h/2,
-y
-);
+};
 
-ctx.arc(
-x+w-h/2,
-y+h/2,
-h/2,
--Math.PI/2,
-Math.PI/2
-);
+regen.onclick=
+()=>{
 
-ctx.lineTo(
-x+h/2,
-y+h
-);
+if(!image)
+return;
 
-ctx.arc(
-x+h/2,
-y+h/2,
-h/2,
-Math.PI/2,
--Math.PI/2
-);
+randomSeed+=7;
 
-ctx.closePath();
+render();
 
-ctx.fill();
+};
 
-}
+download.onclick=
+()=>{
 
-download.onclick=()=>{
-
-let a=
+const a =
 document.createElement(
 "a"
 );
 
-a.href=
+a.href =
 canvas.toDataURL(
 "image/png"
 );
 
-a.download=
+a.download =
 "particle-raster.png";
 
 a.click();
