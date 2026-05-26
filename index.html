@@ -1,637 +1,317 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimalist Dot-Dash Vector Generator</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #111111;
+            --accent-color: #000000;
+            --border-color: #e0e0e0;
+        }
 
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-<title>Hybrid Dot–Dash</title>
+        header {
+            text-align: center;
+            max-width: 600px;
+            margin-bottom: 40px;
+        }
 
-<style>
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.05em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
 
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:Inter,system-ui;
-}
+        p {
+            font-size: 0.95rem;
+            color: #666;
+            line-height: 1.5;
+        }
 
-body{
-background:
-linear-gradient(
-180deg,
-#fff,
-#f5f7fa
-);
+        .container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
 
-padding:60px;
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            background: #fafafa;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
 
-display:flex;
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
 
-justify-content:center;
-}
+        label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
 
-.container{
-width:min(1200px,100%);
-}
+        input[type="range"] {
+            appearance: none;
+            background: #e0e0e0;
+            height: 4px;
+            border-radius: 2px;
+            outline: none;
+        }
 
-.hero{
-text-align:center;
-margin-bottom:40px;
-}
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+        }
 
-h1{
+        .file-upload-btn {
+            background: var(--accent-color);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
 
-font-size:72px;
+        .file-upload-btn:hover {
+            background: #333;
+        }
 
-background:
-linear-gradient(
-90deg,
-#111,
-#555
-);
+        input[type="file"] {
+            display: none;
+        }
 
--webkit-background-clip:text;
+        .output-box {
+            border: 1px solid var(--border-color);
+            background: white;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            max-width: 100%;
+            overflow: auto;
+            min-height: 300px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
 
-color:transparent;
+        canvas {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
 
-}
+        .btn-download {
+            background: transparent;
+            color: var(--accent-color);
+            border: 2px solid var(--accent-color);
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            display: none;
+        }
 
-.sub{
-color:#777;
-margin-top:12px;
-}
-
-.panel{
-
-background:
-rgba(255,255,255,.75);
-
-backdrop-filter:
-blur(40px);
-
-padding:28px;
-
-border-radius:32px;
-
-box-shadow:
-0 20px 80px rgba(0,0,0,.08);
-
-}
-
-.controls{
-
-display:flex;
-
-gap:14px;
-
-justify-content:center;
-
-flex-wrap:wrap;
-
-margin-bottom:24px;
-
-}
-
-.file{
-
-height:56px;
-
-padding:0 22px;
-
-display:flex;
-
-align-items:center;
-
-background:#f3f4f6;
-
-border-radius:999px;
-
-}
-
-button{
-
-height:56px;
-
-padding:0 24px;
-
-border:none;
-
-border-radius:999px;
-
-background:
-linear-gradient(
-90deg,
-#111,
-#444
-);
-
-color:white;
-
-cursor:pointer;
-
-}
-
-canvas{
-
-width:100%;
-
-background:white;
-
-border-radius:24px;
-
-display:block;
-
-}
-
-.footer{
-
-text-align:center;
-
-margin-top:18px;
-
-color:#777;
-
-}
-
-</style>
-
+        .btn-download:hover {
+            background: var(--accent-color);
+            color: white;
+        }
+    </style>
 </head>
-
 <body>
 
-<div class="container">
-
-<div class="hero">
-
-<h1>Hybrid Dot–Dash</h1>
-
-<div class="sub">
-
-Upload → Generate → Regenerate → Export
-
-</div>
-
-</div>
-
-<div class="panel">
-
-<div class="controls">
-
-<label class="file">
-
-<input
-id="upload"
-type="file"
-accept="image/*">
-
-</label>
-
-<button id="generate">
-Generate
-</button>
-
-<button id="regen">
-Regenerate
-</button>
-
-<button id="save">
-Export PNG
-</button>
-
-</div>
-
-<canvas id="canvas"></canvas>
-
-</div>
-
-<div class="footer">
-
-Generative particle raster
-
-</div>
-
-</div>
-
-<script>
-
-const canvas=
-document.getElementById("canvas");
-
-const ctx=
-canvas.getContext("2d");
-
-canvas.width=1600;
-canvas.height=1600;
-
-let image=null;
-let imageData=null;
-let seed=1;
-
-function rand(){
-
-seed=
-(
-seed*
-16807
-)%2147483647;
-
-return(
-seed-1
-)/2147483646;
-
-}
-
-function clear(){
-
-ctx.fillStyle=
-"#fff";
-
-ctx.fillRect(
-0,
-0,
-canvas.width,
-canvas.height
-);
-
-}
-
-clear();
-
-function fit(){
-
-const scale=
-Math.min(
-1200/image.width,
-1200/image.height
-);
-
-return{
-
-w:
-image.width*scale,
-
-h:
-image.height*scale,
-
-x:
-(
-1600-
-image.width*scale
-)/2,
-
-y:
-(
-1600-
-image.height*scale
-)/2
-
-};
-
-}
-
-upload.onchange=e=>{
-
-const file=
-e.target.files[0];
-
-if(!file)return;
-
-const reader=
-new FileReader();
-
-reader.onload=()=>{
-
-image=
-new Image();
-
-image.onload=()=>{
-
-prepare();
-
-preview();
-
-};
-
-image.src=
-reader.result;
-
-};
-
-reader.readAsDataURL(
-file
-);
-
-};
-
-function prepare(){
-
-const temp=
-document.createElement(
-"canvas"
-);
-
-temp.width=
-1600;
-
-temp.height=
-1600;
-
-const t=
-temp.getContext(
-"2d"
-);
-
-t.fillStyle=
-"#fff";
-
-t.fillRect(
-0,
-0,
-1600,
-1600
-);
-
-const s=
-fit();
-
-t.drawImage(
-image,
-s.x,
-s.y,
-s.w,
-s.h
-);
-
-imageData=
-t.getImageData(
-0,
-0,
-1600,
-1600
-);
-
-}
-
-function preview(){
-
-clear();
-
-const s=
-fit();
-
-ctx.drawImage(
-image,
-s.x,
-s.y,
-s.w,
-s.h
-);
-
-}
-
-function pixel(x,y){
-
-const i=
-(
-(
-y|0
-)
-*
-1600+
-(
-x|0
-)
-)
-*4;
-
-const d=
-imageData.data;
-
-return{
-
-r:d[i],
-g:d[i+1],
-b:d[i+2]
-
-};
-
-}
-
-function render(){
-
-if(!imageData)
-return;
-
-clear();
-
-for(
-
-let i=0;
-
-i<140000;
-
-i++
-
-){
-
-let x=
-rand()*1600;
-
-let y=
-rand()*1600;
-
-let p=
-pixel(
-x,
-y
-);
-
-if(
-
-p.r>248&&
-p.g>248&&
-p.b>248
-
-)
-
-continue;
-
-let bright=
-
-(
-p.r+
-p.g+
-p.b
-)/3;
-
-let dark=
-
-1-
-bright/
-255;
-
-/* keep more particles */
-
-if(
-
-rand()>
-
-(
-0.35+
-dark*
-0.65
-)
-
-)
-
-continue;
-
-ctx.fillStyle=
-`rgb(
-${p.r},
-${p.g},
-${p.b}
-)`;
-
-/* DOT */
-
-if(
-rand()<0.28
-){
-
-ctx.beginPath();
-
-ctx.arc(
-
-x+
-(
-rand()-.5
-)*8,
-
-y+
-(
-rand()-.5
-)*8,
-
-1+
-dark*7,
-
-0,
-
-7
-
-);
-
-ctx.fill();
-
-}
-
-/* DASH */
-
-else{
-
-let h=
-
-2+
-dark*8;
-
-let w=
-
-h*
-(
-2+
-rand()*6
-);
-
-ctx.save();
-
-ctx.translate(
-
-x+
-(
-rand()-.5
-)*8,
-
-y+
-(
-rand()-.5
-)*8
-
-);
-
-ctx.rotate(
-
-(
-rand()-.5
-)
-*.08
-
-);
-
-ctx.beginPath();
-
-ctx.roundRect(
-
--w/2,
-
--h/2,
-
-w,
-
-h,
-
-h
-
-);
-
-ctx.fill();
-
-ctx.restore();
-
-}
-
-}
-
-}
-
-generate.onclick=()=>{
-
-seed=
-Date.now();
-
-render();
-
-};
-
-regen.onclick=()=>{
-
-seed+=100;
-
-render();
-
-};
-
-save.onclick=()=>{
-
-const a=
-document.createElement(
-"a"
-);
-
-a.href=
-canvas.toDataURL();
-
-a.download=
-"hybrid-dot-dash.png";
-
-a.click();
-
-};
-
-</script>
-
+    <header>
+        <h1>Dot-Dash Minimalist Generator</h1>
+        <p>Upload an image to transform it into a high-contrast horizontal vector pattern composed strictly of rounded dashes, segments, and dots.</p>
+    </header>
+
+    <div class="container">
+        <div class="controls">
+            <div class="control-group">
+                <label for="imageLoader">Select Image</label>
+                <button class="file-upload-btn" onclick="document.getElementById('imageLoader').click()">Choose File</button>
+                <input type="file" id="imageLoader" accept="image/*">
+            </div>
+
+            <div class="control-group">
+                <label for="resolutionRow">Line Spacing (Resolution)</label>
+                <input type="range" id="resolutionRow" min="6" max="24" value="12" step="2">
+            </div>
+
+            <div class="control-group">
+                <label for="contrastThreshold">Contrast / Threshold</label>
+                <input type="range" id="contrastThreshold" min="0" max="255" value="128">
+            </div>
+            
+            <button id="downloadBtn" class="btn-download">Download Image</button>
+        </div>
+
+        <div class="output-box">
+            <canvas id="imageCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const imageLoader = document.getElementById('imageLoader');
+        const canvas = document.getElementById('imageCanvas');
+        const ctx = canvas.getContext('2d');
+        const resSlider = document.getElementById('resolutionRow');
+        const contrastSlider = document.getElementById('contrastThreshold');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        let originalImage = null;
+
+        imageLoader.addEventListener('change', handleImage, false);
+        resSlider.addEventListener('input', processImage);
+        contrastSlider.addEventListener('input', processImage);
+
+        function handleImage(e) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                originalImage = new Image();
+                originalImage.onload = function() {
+                    // Set maximum canvas display constraints while keeping high quality
+                    const maxDim = 1200;
+                    let width = originalImage.width;
+                    let height = originalImage.height;
+
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height *= maxDim / width;
+                            width = maxDim;
+                        } else {
+                            width *= maxDim / height;
+                            height = maxDim;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    processImage();
+                    downloadBtn.style.display = 'block';
+                }
+                originalImage.src = event.target.result;
+            }
+            reader.readAsDataURL(e.target.files[0]);
+        }
+
+        function processImage() {
+            if (!originalImage) return;
+
+            // 1. Create a temporary offscreen canvas to extract source image data
+            const offscreen = document.createElement('canvas');
+            const offCtx = offscreen.getContext('2d');
+            offscreen.width = canvas.width;
+            offscreen.height = canvas.height;
+            offCtx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+            
+            const imgData = offCtx.getImageData(0, 0, offscreen.width, offscreen.height);
+            const pixels = imgData.data;
+
+            // 2. Reset main canvas to pure white background
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Setup styling parameters
+            const rowSpacing = parseInt(resSlider.value); 
+            const threshold = parseInt(contrastSlider.value);
+            
+            ctx.strokeStyle = "#000000";
+            ctx.fillStyle = "#000000";
+            ctx.lineCap = "round"; // Ensures all dash/line segments have perfectly rounded endpoints
+            ctx.lineWidth = rowSpacing * 0.65; // Adjusts line thickness dynamically relative to row spacing
+
+            // 3. Scan the image dynamically row by row
+            for (let y = rowSpacing / 2; y < canvas.height; y += rowSpacing) {
+                let inDrawingSegment = false;
+                let segmentStartX = 0;
+
+                for (let x = 0; x < canvas.width; x++) {
+                    // Calculate pixel index in the flat array
+                    const idx = (Math.floor(y) * canvas.width + x) * 4;
+                    const r = pixels[idx];
+                    const g = pixels[idx + 1];
+                    const b = pixels[idx + 2];
+                    
+                    // Standard relative luminance formula for grayscale conversion
+                    const brightness = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+                    // If pixel is darker than threshold, it should be drawn (Black line art)
+                    if (brightness < threshold) {
+                        if (!inDrawingSegment) {
+                            inDrawingSegment = true;
+                            segmentStartX = x;
+                        }
+                    } else {
+                        // If it hits a bright pixel, close out the active segment
+                        if (inDrawingSegment) {
+                            drawSegment(segmentStartX, x, y);
+                            inDrawingSegment = false;
+                        }
+                    }
+                }
+                // If the segment reaches the right edge of the canvas while still active
+                if (inDrawingSegment) {
+                    drawSegment(segmentStartX, canvas.width, y);
+                }
+            }
+        }
+
+        function drawSegment(startX, endX, y) {
+            ctx.beginPath();
+            if (startX === endX || (endX - startX) < 1) {
+                // Draw a solid vector dot if length is negligible
+                ctx.arc(startX, y, ctx.lineWidth / 2, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Draw a rounded dash segment
+                ctx.moveTo(startX, y);
+                ctx.lineTo(endX, y);
+                ctx.stroke();
+            }
+        }
+
+        // Handle high-quality downloads
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'dot-dash-minimalist.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    </script>
 </body>
-
 </html>
