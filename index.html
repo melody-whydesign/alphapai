@@ -168,8 +168,13 @@
             </div>
 
             <div class="control-group">
-                <label for="resolutionRow">Line Spacing (Resolution)</label>
+                <label for="resolutionRow">Line Spacing</label>
                 <input type="range" id="resolutionRow" min="6" max="24" value="12" step="2">
+            </div>
+
+            <div class="control-group">
+                <label for="maxDashSlider">Max Dash Length (Lower = More Dots)</label>
+                <input type="range" id="maxDashSlider" min="2" max="60" value="15" step="1">
             </div>
 
             <div class="control-group">
@@ -190,6 +195,7 @@
         const canvas = document.getElementById('imageCanvas');
         const ctx = canvas.getContext('2d');
         const resSlider = document.getElementById('resolutionRow');
+        const maxDashSlider = document.getElementById('maxDashSlider');
         const contrastSlider = document.getElementById('contrastThreshold');
         const downloadBtn = document.getElementById('downloadBtn');
 
@@ -197,6 +203,7 @@
 
         imageLoader.addEventListener('change', handleImage, false);
         resSlider.addEventListener('input', processImage);
+        maxDashSlider.addEventListener('input', processImage);
         contrastSlider.addEventListener('input', processImage);
 
         function handleImage(e) {
@@ -204,7 +211,6 @@
             reader.onload = function(event) {
                 originalImage = new Image();
                 originalImage.onload = function() {
-                    // Set maximum canvas display constraints while keeping high quality
                     const maxDim = 1200;
                     let width = originalImage.width;
                     let height = originalImage.height;
@@ -232,7 +238,6 @@
         function processImage() {
             if (!originalImage) return;
 
-            // 1. Create a temporary offscreen canvas to extract source image data
             const offscreen = document.createElement('canvas');
             const offCtx = offscreen.getContext('2d');
             offscreen.width = canvas.width;
@@ -242,49 +247,53 @@
             const imgData = offCtx.getImageData(0, 0, offscreen.width, offscreen.height);
             const pixels = imgData.data;
 
-            // 2. Reset main canvas to pure white background
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Setup styling parameters
             const rowSpacing = parseInt(resSlider.value); 
+            const maxDash = parseInt(maxDashSlider.value);
             const threshold = parseInt(contrastSlider.value);
             
             ctx.strokeStyle = "#000000";
             ctx.fillStyle = "#000000";
-            ctx.lineCap = "round"; // Ensures all dash/line segments have perfectly rounded endpoints
-            ctx.lineWidth = rowSpacing * 0.65; // Adjusts line thickness dynamically relative to row spacing
+            ctx.lineCap = "round"; 
+            ctx.lineWidth = rowSpacing * 0.6; // Slightly thinner line to make gaps/dots more pronounced
 
-            // 3. Scan the image dynamically row by row
+            // A tiny gap value to split the lines rhythmically
+            const breakGap = Math.max(2, rowSpacing * 0.3);
+
             for (let y = rowSpacing / 2; y < canvas.height; y += rowSpacing) {
                 let inDrawingSegment = false;
                 let segmentStartX = 0;
 
                 for (let x = 0; x < canvas.width; x++) {
-                    // Calculate pixel index in the flat array
                     const idx = (Math.floor(y) * canvas.width + x) * 4;
                     const r = pixels[idx];
                     const g = pixels[idx + 1];
                     const b = pixels[idx + 2];
                     
-                    // Standard relative luminance formula for grayscale conversion
                     const brightness = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-                    // If pixel is darker than threshold, it should be drawn (Black line art)
                     if (brightness < threshold) {
                         if (!inDrawingSegment) {
                             inDrawingSegment = true;
                             segmentStartX = x;
+                        } else {
+                            // If the current dash length exceeds our allowed max limit, 
+                            // force-draw it right now and create a tiny geometric gap to start a new segment.
+                            if ((x - segmentStartX) >= maxDash) {
+                                drawSegment(segmentStartX, x, y);
+                                x += Math.floor(breakGap); // Skip forward slightly to insert a clear visual gap
+                                inDrawingSegment = false;
+                            }
                         }
                     } else {
-                        // If it hits a bright pixel, close out the active segment
                         if (inDrawingSegment) {
                             drawSegment(segmentStartX, x, y);
                             inDrawingSegment = false;
                         }
                     }
                 }
-                // If the segment reaches the right edge of the canvas while still active
                 if (inDrawingSegment) {
                     drawSegment(segmentStartX, canvas.width, y);
                 }
@@ -292,23 +301,22 @@
         }
 
         function drawSegment(startX, endX, y) {
-            ctx.beginPath();
-            if (startX === endX || (endX - startX) < 1) {
-                // Draw a solid vector dot if length is negligible
-                ctx.arc(startX, y, ctx.lineWidth / 2, 0, Math.PI * 2);
+            // If the segment length is tiny, or matches a very low maxDash limit, force a true circular dot
+            if ((endX - startX) <= 3) {
+                ctx.beginPath();
+                ctx.arc(startX + (endX - startX)/2, y, ctx.lineWidth / 2, 0, Math.PI * 2);
                 ctx.fill();
             } else {
-                // Draw a rounded dash segment
+                ctx.beginPath();
                 ctx.moveTo(startX, y);
                 ctx.lineTo(endX, y);
                 ctx.stroke();
             }
         }
 
-        // Handle high-quality downloads
         downloadBtn.addEventListener('click', () => {
             const link = document.createElement('a');
-            link.download = 'dot-dash-minimalist.png';
+            link.download = 'dot-dash-pattern.png';
             link.href = canvas.toDataURL('image/png');
             link.click();
         });
