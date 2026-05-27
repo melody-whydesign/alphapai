@@ -215,7 +215,7 @@
         <div>
             <header>
                 <h1>Dot-Dash Image Generator</h1>
-                <p>An interactive dynamic identity platform. Upload artwork to create stylized modular rows that burst outwards in a radial grid layout.</p>
+                <p>An interactive dynamic identity platform. Upload artwork to create stylized modular rows that burst outwards in a clean, geometric horizontal matrix.</p>
             </header>
 
             <div class="controls-stack">
@@ -398,26 +398,17 @@
         function registerElement(startX, endX, y, rowSpacing, forcedDot) {
             if (endX <= startX) return;
 
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const elementCenterX = startX + (endX - startX) / 2;
-            
-            // Calculate direction vectors relative to center for multidirectional/radial explosion
+            // Pure parallel tracking: Keep shift vector strictly mapped along horizontal track coordinates
             const maxShiftX = (Math.random() - 0.5) * (canvas.width * 0.35); 
-            
-            // NEW: Add random vertical shift parameter range
-            const maxShiftY = (Math.random() - 0.5) * (canvas.height * 0.25);
-            
             let morphDelta = (Math.random() - 0.5) * (rowSpacing * 3.5);
 
             vectorElements.push({
                 homeX1: startX,
                 homeX2: endX,
-                homeY: y, // Remember baseline row height
+                y: y, 
                 lineWidth: rowSpacing * 0.55,
                 isDot: forcedDot,
                 shiftX: maxShiftX,
-                shiftY: maxShiftY, // Added vertical expansion multiplier
                 morph: morphDelta,
                 speedModifier: 0.5 + Math.random() * 0.5 
             });
@@ -433,23 +424,23 @@
 
             let easeParam = 0; 
 
-            // SINGLE EXPANSION TIMELINE SYSTEM
+            // GEOMETRIC SINGLE EXPANSION TIMELINE ENVELOPE
             if (timeParam < Math.PI) {
-                // Segment A: Single Smooth Expansion Outward
+                // Segment A: Linear Sweep Outward
                 let norm = timeParam / Math.PI;
                 easeParam = Math.sin(norm * (Math.PI / 2));
             } 
             else if (timeParam >= Math.PI && timeParam < Math.PI + 0.5) {
-                // Segment B: 0.5 Second Hold at Max Expanded State
+                // Segment B: 0.5 Second Technical Hold State Pause
                 easeParam = 1;
             } 
             else if (timeParam >= Math.PI + 0.5 && timeParam < Math.PI * 2 + 0.5) {
-                // Segment C: Smooth Return Collapse back to Baseline Shape
+                // Segment C: Unified Linear Snap Inward
                 let norm = (timeParam - (Math.PI + 0.5)) / Math.PI;
                 easeParam = Math.cos(norm * (Math.PI / 2));
             }
             else {
-                // Segment D: 1.0 Second Rest State Pause before re-triggering next cycle
+                // Segment D: 1.0 Second Rest State Pause before cycling
                 easeParam = 0;
             }
 
@@ -457,34 +448,27 @@
                 const el = vectorElements[i];
                 ctx.lineWidth = el.lineWidth;
 
-                // Scale shift vectors with uniform frame easing properties
                 let totalEase = easeParam * el.speedModifier;
                 
                 let currentShiftX = el.shiftX * totalEase;
-                let currentShiftY = el.shiftY * totalEase; // Apply vertical ease shift
                 let currentMorph = el.morph * totalEase;
 
                 let origCenterX = el.homeX1 + (el.homeX2 - el.homeX1) / 2;
                 let newCenterX = origCenterX + currentShiftX;
-                
-                // New dynamic Y location coordinate position mapping
-                let newCenterY = el.homeY + currentShiftY;
-                
                 let newLength = Math.max(1, (el.homeX2 - el.homeX1) + currentMorph);
 
-                // KEEP THE APPEARANCE HORIZONTAL: 
-                // Keep drawing x1 and x2 on a horizontal plane using the modified newCenterY parameter coordinate.
+                // Locked strict horizontal drawing layout coordinate tracks
                 let x1 = newCenterX - newLength / 2;
                 let x2 = newCenterX + newLength / 2;
 
                 if (el.isDot || newLength <= ctx.lineWidth * 0.8) {
                     ctx.beginPath();
-                    ctx.arc(newCenterX, newCenterY, ctx.lineWidth / 2, 0, Math.PI * 2);
+                    ctx.arc(newCenterX, el.y, ctx.lineWidth / 2, 0, Math.PI * 2);
                     ctx.fill();
                 } else {
                     ctx.beginPath();
-                    ctx.moveTo(x1, newCenterY);
-                    ctx.lineTo(x2, newCenterY);
+                    ctx.moveTo(x1, el.y);
+                    ctx.lineTo(x2, el.y);
                     ctx.stroke();
                 }
             }
@@ -513,7 +497,6 @@
             
             timeParam += 0.038; 
             
-            // Core Single Expansion Loop Limit Boundary Condition Check (2 Full PIs + 1.5 Delay Windows)
             const targetLoopLimit = Math.PI * 2 + 1.5;
             if (timeParam > targetLoopLimit) {
                 timeParam -= targetLoopLimit; 
