@@ -45,7 +45,7 @@
 
         .container {
             width: 100%;
-            max-width: 800px;
+            max-width: 850px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -54,22 +54,39 @@
 
         .controls {
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: column;
             gap: 20px;
-            justify-content: center;
-            align-items: center;
             background: #fafafa;
-            padding: 20px;
+            padding: 24px;
             border: 1px solid var(--border-color);
             border-radius: 4px;
             width: 100%;
             box-sizing: border-box;
         }
 
+        .slider-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            border-top: 1px solid #eeeeee;
+            padding-top: 16px;
+        }
+
         .control-group {
             display: flex;
             flex-direction: column;
             gap: 8px;
+            min-width: 180px;
         }
 
         label {
@@ -142,6 +159,7 @@
             padding: 10px 20px;
             border-radius: 4px;
             font-weight: 600;
+            font-size: 0.9rem;
             cursor: pointer;
             display: none;
             transition: all 0.2s ease;
@@ -159,40 +177,49 @@
         #animateBtn:hover {
             background: #333333;
         }
+        
+        #recordBtn {
+            border-color: #555;
+            color: #555;
+        }
+        #recordBtn:hover {
+            background: #555;
+            color: white;
+        }
     </style>
 </head>
 <body>
 
     <header>
         <h1>Dot-Dash Image Generator</h1>
-        <p>Transform your subject into a fluid, responsive layout. Click "Animate" to watch the elements scatter, morph, and reconstruct completely horizontally.</p>
+        <p>An interactive dynamic identity platform. Upload an image to generate intertwined rows of dots and dashes that morph in a fluid kinetic timeline.</p>
     </header>
 
     <div class="container">
         <div class="controls">
-            <div class="control-group">
-                <label for="imageLoader">Select Image</label>
-                <button class="file-upload-btn" onclick="document.getElementById('imageLoader').click()">Choose File</button>
-                <input type="file" id="imageLoader" accept="image/*">
-            </div>
+            <div class="slider-row">
+                <div class="control-group">
+                    <label for="imageLoader">Select Image</label>
+                    <button class="file-upload-btn" onclick="document.getElementById('imageLoader').click()">Choose File</button>
+                    <input type="file" id="imageLoader" accept="image/*">
+                </div>
 
-            <div class="control-group">
-                <label for="resolutionRow">Line Spacing</label>
-                <input type="range" id="resolutionRow" min="8" max="24" value="14" step="1">
-            </div>
+                <div class="control-group">
+                    <label for="lineHeightSlider">Line Height (Dot Size)</label>
+                    <input type="range" id="lineHeightSlider" min="6" max="36" value="16" step="1">
+                </div>
 
-            <div class="control-group">
-                <label for="dotBiasSlider">Dot Ratio</label>
-                <input type="range" id="dotBiasSlider" min="1" max="10" value="6" step="1">
-            </div>
-
-            <div class="control-group">
-                <label for="contrastThreshold">Contrast Threshold</label>
-                <input type="range" id="contrastThreshold" min="10" max="245" value="128">
+                <div class="control-group">
+                    <label for="contrastThreshold">Contrast Threshold</label>
+                    <input type="range" id="contrastThreshold" min="10" max="245" value="128">
+                </div>
             </div>
             
-            <button id="animateBtn" class="action-btn">Animate Motion</button>
-            <button id="downloadBtn" class="action-btn">Download Image</button>
+            <div class="button-row">
+                <button id="animateBtn" class="action-btn">Animate Motion</button>
+                <button id="downloadBtn" class="action-btn">Download Image</button>
+                <button id="recordBtn" class="action-btn">Download Animation</button>
+            </div>
         </div>
 
         <div class="output-box">
@@ -204,25 +231,28 @@
         const imageLoader = document.getElementById('imageLoader');
         const canvas = document.getElementById('imageCanvas');
         const ctx = canvas.getContext('2d');
-        const resSlider = document.getElementById('resolutionRow');
-        const dotBiasSlider = document.getElementById('dotBiasSlider');
+        const lhSlider = document.getElementById('lineHeightSlider');
         const contrastSlider = document.getElementById('contrastThreshold');
         const downloadBtn = document.getElementById('downloadBtn');
         const animateBtn = document.getElementById('animateBtn');
+        const recordBtn = document.getElementById('recordBtn');
 
         let originalImage = null;
         let vectorElements = []; 
         let animationFrameId = null;
         let isAnimating = false;
-        let animationProgress = 0; 
-        let animationDirection = 1; 
-        let holdCounter = 0;
+        let timeParam = 0; // Continuous growing tracker for loop
+
+        // Recording parameters
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let isRecording = false;
 
         imageLoader.addEventListener('change', handleImage, false);
-        resSlider.addEventListener('input', () => { stopAnimation(); processImage(); });
-        dotBiasSlider.addEventListener('input', () => { stopAnimation(); processImage(); });
+        lhSlider.addEventListener('input', () => { stopAnimation(); processImage(); });
         contrastSlider.addEventListener('input', () => { stopAnimation(); processImage(); });
         animateBtn.addEventListener('click', toggleAnimation);
+        recordBtn.addEventListener('click', startRecordingLoop);
 
         function handleImage(e) {
             const reader = new FileReader();
@@ -243,12 +273,13 @@
                         }
                     }
 
-                    canvas.width = width;
-                    canvas.height = height;
+                    canvas.width = Math.floor(width);
+                    canvas.height = Math.floor(height);
                     stopAnimation();
                     processImage();
                     downloadBtn.style.display = 'block';
                     animateBtn.style.display = 'block';
+                    recordBtn.style.display = 'block';
                 }
                 originalImage.src = event.target.result;
             }
@@ -267,13 +298,12 @@
             const imgData = offCtx.getImageData(0, 0, offscreen.width, offscreen.height);
             const pixels = imgData.data;
 
-            const rowSpacing = parseInt(resSlider.value); 
-            const dotBias = parseInt(dotBiasSlider.value); 
+            const rowSpacing = parseInt(lhSlider.value); 
             const threshold = parseInt(contrastSlider.value);
             
-            const baseGap = Math.max(3, rowSpacing * 0.35);
             vectorElements = []; 
 
+            // Hard clamp math grid boundaries to ensure no line positions are dropped
             for (let y = Math.floor(rowSpacing / 2); y < canvas.height; y += rowSpacing) {
                 let inDrawingSegment = false;
                 let segmentStartX = 0;
@@ -285,47 +315,76 @@
                     const brightness = 0.2126 * pixels[idx] + 0.7152 * pixels[idx+1] + 0.0722 * pixels[idx+2];
 
                     if (brightness < threshold) {
-                        const darknessFactor = (threshold - brightness) / threshold; 
-                        const maxAllowedDash = Math.max(1, (darknessFactor * 100) / (dotBias * 0.7));
-
                         if (!inDrawingSegment) {
                             inDrawingSegment = true;
                             segmentStartX = x;
-                        } else if ((x - segmentStartX) >= maxAllowedDash) {
-                            registerElement(segmentStartX, x, y, rowSpacing);
-                            x += Math.floor(baseGap); 
-                            inDrawingSegment = false;
                         }
                     } else {
                         if (inDrawingSegment) {
-                            registerElement(segmentStartX, x, y, rowSpacing);
+                            segmentShatter(segmentStartX, x, y, rowSpacing);
                             inDrawingSegment = false;
                         }
                     }
                 }
                 if (inDrawingSegment) {
-                    registerElement(segmentStartX, canvas.width, y, rowSpacing);
+                    segmentShatter(segmentStartX, canvas.width, y, rowSpacing);
                 }
             }
             render(); 
         }
 
-        function registerElement(startX, endX, y, rowSpacing) {
-            const origLength = endX - startX;
-            const isInitiallyDot = origLength <= Math.max(4, rowSpacing * 0.4);
-            
-            const maxShiftX = (Math.random() - 0.5) * (canvas.width * 0.35); 
-            let morphDelta = (Math.random() - 0.5) * 60;
+        // Breaks solid areas down to achieve an interleaved 50/50 dot-dash distribution pattern
+        function segmentShatter(startX, endX, y, rowSpacing) {
+            let currentX = startX;
+            const totalWidth = endX - startX;
+            const baseGap = Math.max(3, rowSpacing * 0.35);
+
+            // If the chunk is naturally tiny, just turn it directly into an isolated dot
+            if (totalWidth <= rowSpacing * 0.5) {
+                registerElement(startX, endX, y, rowSpacing, true);
+                return;
+            }
+
+            // Slice block systematically to interleave dots and dashes 
+            while (currentX < endX) {
+                let remaining = endX - currentX;
+                
+                // Generative coin toss determines if the next item is a dot or a dash
+                let spawnDot = Math.random() > 0.5;
+
+                if (spawnDot || remaining < rowSpacing) {
+                    let dotWidth = Math.max(2, rowSpacing * 0.2);
+                    registerElement(currentX, Math.min(endX, currentX + dotWidth), y, rowSpacing, true);
+                    currentX += dotWidth + baseGap;
+                } else {
+                    // Generate variable dash lengths so rows don't look completely rigid
+                    let dashWidth = rowSpacing * (1.5 + Math.random() * 2.5);
+                    let targetEndX = Math.min(endX, currentX + dashWidth);
+                    
+                    // Guard against leaving weird slivers at the end edge
+                    if (endX - targetEndX < baseGap + 2) {
+                        targetEndX = endX;
+                    }
+                    
+                    registerElement(currentX, targetEndX, y, rowSpacing, false);
+                    currentX = targetEndX + baseGap;
+                }
+            }
+        }
+
+        function registerElement(startX, endX, y, rowSpacing, forcedDot) {
+            const maxShiftX = (Math.random() - 0.5) * (canvas.width * 0.3); 
+            let morphDelta = (Math.random() - 0.5) * (rowSpacing * 3);
             
             vectorElements.push({
                 homeX1: startX,
                 homeX2: endX,
                 y: y,
                 lineWidth: rowSpacing * 0.55,
-                isDot: isInitiallyDot,
+                isDot: forcedDot,
                 shiftX: maxShiftX,
                 morph: morphDelta,
-                speedModifier: 0.4 + Math.random() * 0.6 
+                speedModifier: 0.5 + Math.random() * 0.5 
             });
         }
 
@@ -337,17 +396,15 @@
             ctx.fillStyle = "#000000";
             ctx.lineCap = "round";
 
-            const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            // Cosine wave converts timeParam to an ultra smooth value between 0 and 1 with no linear edge stops
+            let globalEase = 0.5 - 0.5 * Math.cos(timeParam);
 
             for (let i = 0; i < vectorElements.length; i++) {
                 const el = vectorElements[i];
                 ctx.lineWidth = el.lineWidth;
 
-                let localProgress = Math.min(1, Math.max(0, animationProgress * el.speedModifier));
-                let currentEase = easeInOutCubic(localProgress);
-
-                let currentShift = el.shiftX * currentEase;
-                let currentMorph = el.morph * currentEase;
+                let currentShift = el.shiftX * globalEase * el.speedModifier;
+                let currentMorph = el.morph * globalEase * el.speedModifier;
 
                 let origCenterX = el.homeX1 + (el.homeX2 - el.homeX1) / 2;
                 let newCenterX = origCenterX + currentShift;
@@ -356,7 +413,8 @@
                 let x1 = newCenterX - newLength / 2;
                 let x2 = newCenterX + newLength / 2;
 
-                if (newLength <= Math.max(4, el.lineWidth * 0.7)) {
+                // Dynamic draw assignment
+                if (el.isDot || newLength <= ctx.lineWidth * 0.8) {
                     ctx.beginPath();
                     ctx.arc(newCenterX, el.y, ctx.lineWidth / 2, 0, Math.PI * 2);
                     ctx.fill();
@@ -383,33 +441,61 @@
             isAnimating = false;
             animateBtn.innerText = "Animate Motion";
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            animationProgress = 0;
-            animationDirection = 1;
-            holdCounter = 0;
+            timeParam = 0;
             render();
         }
 
         function tick() {
-            if (!isAnimating) return;
-
-            if (holdCounter > 0) {
-                holdCounter--;
-            } else {
-                animationProgress += 0.012 * animationDirection;
-
-                if (animationProgress >= 1) {
-                    animationProgress = 1;
-                    animationDirection = -1; 
-                    holdCounter = 45; 
-                } else if (animationProgress <= 0) {
-                    animationProgress = 0;
-                    animationDirection = 1; 
-                    holdCounter = 60; 
+            if (!isAnimating && !isRecording) return;
+            
+            // Increment the angle cleanly for smooth animation flow
+            timeParam += 0.025; 
+            if (timeParam > Math.PI * 2) {
+                timeParam -= Math.PI * 2; 
+                // Automatically close out video rendering loop once a complete round cycle resolves
+                if (isRecording) {
+                    mediaRecorder.stop();
+                    isRecording = false;
+                    recordBtn.innerText = "Download Animation";
                 }
             }
 
             render();
-            animationFrameId = requestAnimationFrame(tick);
+            if (isAnimating || isRecording) {
+                animationFrameId = requestAnimationFrame(tick);
+            }
+        }
+
+        // Automated Video Export Module 
+        function startRecordingLoop() {
+            if (isRecording) return;
+            
+            stopAnimation();
+            isRecording = true;
+            recordedChunks = [];
+            timeParam = 0; // Sync start sequence exactly at original rest position
+            recordBtn.innerText = "Recording...";
+
+            const stream = canvas.captureStream(30); // Capture viewport at 30FPS
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+
+            mediaRecorder.ondataavailable = function(e) {
+                if (e.data.size > 0) recordedChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = function() {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'dot-dash-kinetic-art.webm';
+                a.click();
+                window.URL.revokeObjectURL(url);
+                stopAnimation();
+            };
+
+            mediaRecorder.start();
+            tick(); // Fire rendering timeline sequence
         }
 
         downloadBtn.addEventListener('click', () => {
