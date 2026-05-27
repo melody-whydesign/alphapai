@@ -192,7 +192,7 @@
 
     <header>
         <h1>Dot-Dash Image Generator</h1>
-        <p>An interactive dynamic identity platform. Upload an image to generate intertwined rows of dots, micro-dashes, and lines that morph in a dual-stage kinetic timeline.</p>
+        <p>An interactive dynamic identity platform. Upload an image to generate intertwined rows of dots, micro-dashes, and lines that morph in a synchronized kinetic timeline.</p>
     </header>
 
     <div class="container">
@@ -337,44 +337,36 @@
             const totalWidth = endX - startX;
             const baseGap = Math.max(3, rowSpacing * 0.35);
 
-            // 1. Handle naturally tiny zones immediately as an isolated dot
             if (totalWidth <= rowSpacing * 0.6) {
                 registerElement(startX, endX, y, rowSpacing, true);
                 return;
             }
 
-            // FIXED ROW PROGRESSION ENGINE:
-            // Instead of selecting random floating values that clip loop logic, we use fixed stepping sizes based on row spacing.
             const dotSize = Math.max(2, rowSpacing * 0.2);
-            const microDashSize = rowSpacing * 0.7; // Exactly wide enough to look like 2 integrated dots
-            const standardDashSize = rowSpacing * 1.8; // Medium standard anchoring dash
+            const microDashSize = rowSpacing * 0.7; 
+            const standardDashSize = rowSpacing * 1.8; 
 
             let alternateCounter = 0;
 
             while (currentX < endX) {
                 let remaining = endX - currentX;
 
-                // Guard constraint: if remaining width cannot even fit a gap, close out segment safely
                 if (remaining < dotSize) {
                     break;
                 }
 
-                // Symmetrically cycle item selection to secure exact 50/50 layout spacing balances
                 let selectionMode = alternateCounter % 3;
                 alternateCounter++;
 
                 if (selectionMode === 0 || remaining < microDashSize) {
-                    // Place Dot
                     let targetX = Math.min(endX, currentX + dotSize);
                     registerElement(currentX, targetX, y, rowSpacing, true);
                     currentX = targetX + baseGap;
                 } else if (selectionMode === 1 || remaining < standardDashSize) {
-                    // Place Micro-dash (2-dot width variant)
                     let targetX = Math.min(endX, currentX + microDashSize);
                     registerElement(currentX, targetX, y, rowSpacing, false);
                     currentX = targetX + baseGap;
                 } else {
-                    // Place Standard Dash
                     let targetX = Math.min(endX, currentX + standardDashSize);
                     registerElement(currentX, targetX, y, rowSpacing, false);
                     currentX = targetX + baseGap;
@@ -383,7 +375,6 @@
         }
 
         function registerElement(startX, endX, y, rowSpacing, forcedDot) {
-            // Guard loop against invalid geometry generation math
             if (endX <= startX) return;
 
             const maxShiftX = (Math.random() - 0.5) * (canvas.width * 0.35); 
@@ -421,20 +412,39 @@
             ctx.fillStyle = "#000000";
             ctx.lineCap = "round";
 
-            let wave1 = 0;
-            let wave2 = 0;
-            
+            // SYSTEM REWRITE: COMPOSITED CHRONOLOGICAL TIMELINE (0 to 2PI Loop Window)
+            let wave1 = 0; // Primary overall layout push
+            let wave2 = 0; // Center-weighted accentuation bump
+
             if (timeParam < Math.PI) {
-                wave1 = Math.sin(timeParam); 
+                // Outbound Phase (0 -> PI): Elements unfold smoothly outwards and hold position
+                // We map 0 -> PI to a 0 -> 90 degree sine curve so elements travel out and stop smoothly at max extension
+                let outboundProgress = timeParam / Math.PI; // Linear 0 to 1
+                wave1 = Math.sin(outboundProgress * (Math.PI / 2));
+
+                // The second expansion kicks in halfway through the outward journey (after 45% progress)
+                if (outboundProgress > 0.45) {
+                    let subProgress = (outboundProgress - 0.45) / 0.55; // Normalize 0 to 1
+                    // Secondary smooth surge envelope
+                    wave2 = Math.sin(subProgress * Math.PI);
+                }
             } else {
-                wave2 = Math.sin(timeParam - Math.PI);
+                // Inbound Return Phase (PI -> 2PI): All particles pull back together to home baseline uniformly
+                let inboundProgress = (timeParam - Math.PI) / Math.PI; // Linear 0 to 1
+                // Calculates reverse execution path starting cleanly from the stacked wave thresholds
+                wave1 = Math.cos(inboundProgress * (Math.PI / 2));
+                wave2 = 0; // Decelerates cleanly back to zero
             }
 
             for (let i = 0; i < vectorElements.length; i++) {
                 const el = vectorElements[i];
                 ctx.lineWidth = el.lineWidth;
 
-                let totalEase = (wave1 * el.speedModifier) + (wave2 * el.proximity * el.speedModifier * 0.85);
+                // Base motion applies to all elements.
+                // The center expansion (wave2) influences particles closer to the core much heavier, 
+                // while peripheral pieces receive a subtle secondary accentuation push (0.2 minimum weight multiplier).
+                let localizedWave2Weight = Math.max(0.2, el.proximity);
+                let totalEase = (wave1 * el.speedModifier) + (wave2 * localizedWave2Weight * el.speedModifier * 0.4);
 
                 let currentShift = el.shiftX * totalEase;
                 let currentMorph = el.morph * totalEase;
@@ -480,7 +490,8 @@
         function tick() {
             if (!isAnimating && !isRecording) return;
             
-            timeParam += 0.04; 
+            // Execution speed parameter
+            timeParam += 0.035; 
             if (timeParam > Math.PI * 2) {
                 timeParam -= Math.PI * 2; 
                 if (isRecording) {
