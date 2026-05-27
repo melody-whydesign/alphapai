@@ -337,47 +337,55 @@
             const totalWidth = endX - startX;
             const baseGap = Math.max(3, rowSpacing * 0.35);
 
-            if (totalWidth <= rowSpacing * 0.5) {
+            // 1. Handle naturally tiny zones immediately as an isolated dot
+            if (totalWidth <= rowSpacing * 0.6) {
                 registerElement(startX, endX, y, rowSpacing, true);
                 return;
             }
 
+            // FIXED ROW PROGRESSION ENGINE:
+            // Instead of selecting random floating values that clip loop logic, we use fixed stepping sizes based on row spacing.
+            const dotSize = Math.max(2, rowSpacing * 0.2);
+            const microDashSize = rowSpacing * 0.7; // Exactly wide enough to look like 2 integrated dots
+            const standardDashSize = rowSpacing * 1.8; // Medium standard anchoring dash
+
+            let alternateCounter = 0;
+
             while (currentX < endX) {
                 let remaining = endX - currentX;
-                
-                // 50/50 toss to choose between placing a circle dot or a line dash
-                let spawnDot = Math.random() > 0.5;
 
-                if (spawnDot || remaining < rowSpacing) {
-                    let dotWidth = Math.max(2, rowSpacing * 0.2);
-                    registerElement(currentX, Math.min(endX, currentX + dotWidth), y, rowSpacing, true);
-                    currentX += dotWidth + baseGap;
+                // Guard constraint: if remaining width cannot even fit a gap, close out segment safely
+                if (remaining < dotSize) {
+                    break;
+                }
+
+                // Symmetrically cycle item selection to secure exact 50/50 layout spacing balances
+                let selectionMode = alternateCounter % 3;
+                alternateCounter++;
+
+                if (selectionMode === 0 || remaining < microDashSize) {
+                    // Place Dot
+                    let targetX = Math.min(endX, currentX + dotSize);
+                    registerElement(currentX, targetX, y, rowSpacing, true);
+                    currentX = targetX + baseGap;
+                } else if (selectionMode === 1 || remaining < standardDashSize) {
+                    // Place Micro-dash (2-dot width variant)
+                    let targetX = Math.min(endX, currentX + microDashSize);
+                    registerElement(currentX, targetX, y, rowSpacing, false);
+                    currentX = targetX + baseGap;
                 } else {
-                    // UPDATED DASH ENGINE:
-                    // Randomly select between a micro-dash (width of ~2 dots) and a standard medium dash.
-                    // This limits massive lines and injects heavy asymmetry.
-                    let dashWidth;
-                    if (Math.random() > 0.4) {
-                        // Micro-dash option (approx 0.6 to 1.2x line spacing width)
-                        dashWidth = rowSpacing * (0.6 + Math.random() * 0.6);
-                    } else {
-                        // Regular medium dash option
-                        dashWidth = rowSpacing * (1.5 + Math.random() * 1.5);
-                    }
-
-                    let targetEndX = Math.min(endX, currentX + dashWidth);
-                    
-                    if (endX - targetEndX < baseGap + 2) {
-                        targetEndX = endX;
-                    }
-                    
-                    registerElement(currentX, targetEndX, y, rowSpacing, false);
-                    currentX = targetEndX + baseGap;
+                    // Place Standard Dash
+                    let targetX = Math.min(endX, currentX + standardDashSize);
+                    registerElement(currentX, targetX, y, rowSpacing, false);
+                    currentX = targetX + baseGap;
                 }
             }
         }
 
         function registerElement(startX, endX, y, rowSpacing, forcedDot) {
+            // Guard loop against invalid geometry generation math
+            if (endX <= startX) return;
+
             const maxShiftX = (Math.random() - 0.5) * (canvas.width * 0.35); 
             let morphDelta = (Math.random() - 0.5) * (rowSpacing * 3.5);
             
