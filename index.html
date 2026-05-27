@@ -126,7 +126,6 @@
             display: none;
         }
 
-        /* Relocated Button Stack Block */
         .button-group {
             display: flex;
             flex-direction: column;
@@ -216,7 +215,7 @@
         <div>
             <header>
                 <h1>Dot-Dash Image Generator</h1>
-                <p>An interactive dynamic identity platform. Upload artwork to create stylized modular rows that move on a unified kinetic loop.</p>
+                <p>An interactive dynamic identity platform. Upload artwork to create stylized modular rows that burst outwards in a radial grid layout.</p>
             </header>
 
             <div class="controls-stack">
@@ -265,7 +264,7 @@
         let isAnimating = false;
         let timeParam = 0; 
 
-        // Recording variables
+        // Recording parameters
         let mediaRecorder = null;
         let recordedChunks = [];
         let isRecording = false;
@@ -399,29 +398,27 @@
         function registerElement(startX, endX, y, rowSpacing, forcedDot) {
             if (endX <= startX) return;
 
-            const maxShiftX = (Math.random() - 0.5) * (canvas.width * 0.35); 
-            let morphDelta = (Math.random() - 0.5) * (rowSpacing * 3.5);
-            
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
             const elementCenterX = startX + (endX - startX) / 2;
             
-            const distY = y - centerY;
-            const distX = elementCenterX - centerX;
-            const distanceToCenter = Math.sqrt(distX * distX + distY * distY);
-            const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
+            // Calculate direction vectors relative to center for multidirectional/radial explosion
+            const maxShiftX = (Math.random() - 0.5) * (canvas.width * 0.35); 
             
-            const centerProximity = Math.max(0, 1 - (distanceToCenter / (maxRadius * 0.65)));
+            // NEW: Add random vertical shift parameter range
+            const maxShiftY = (Math.random() - 0.5) * (canvas.height * 0.25);
+            
+            let morphDelta = (Math.random() - 0.5) * (rowSpacing * 3.5);
 
             vectorElements.push({
                 homeX1: startX,
                 homeX2: endX,
-                y: y,
+                homeY: y, // Remember baseline row height
                 lineWidth: rowSpacing * 0.55,
                 isDot: forcedDot,
                 shiftX: maxShiftX,
+                shiftY: maxShiftY, // Added vertical expansion multiplier
                 morph: morphDelta,
-                proximity: centerProximity, 
                 speedModifier: 0.5 + Math.random() * 0.5 
             });
         }
@@ -434,65 +431,60 @@
             ctx.fillStyle = "#000000";
             ctx.lineCap = "round";
 
-            let wave1 = 0; 
-            let wave2 = 0; 
+            let easeParam = 0; 
 
-            // THE GENERATIVE KINETIC ENGINE
-            // Partition boundaries to build structural holds and variations smoothly
+            // SINGLE EXPANSION TIMELINE SYSTEM
             if (timeParam < Math.PI) {
-                // Segment A: Uniform Expansion Outward
+                // Segment A: Single Smooth Expansion Outward
                 let norm = timeParam / Math.PI;
-                wave1 = Math.sin(norm * (Math.PI / 2));
-                wave2 = 0;
+                easeParam = Math.sin(norm * (Math.PI / 2));
             } 
             else if (timeParam >= Math.PI && timeParam < Math.PI + 0.5) {
-                // Segment B: Updated 0.5 Second Mid-Break Hold
-                wave1 = 1;
-                wave2 = 0;
+                // Segment B: 0.5 Second Hold at Max Expanded State
+                easeParam = 1;
             } 
             else if (timeParam >= Math.PI + 0.5 && timeParam < Math.PI * 2 + 0.5) {
-                // Segment C: Secondary Accent Surge (Amplified to 0.7 intensity value)
-                wave1 = 1;
+                // Segment C: Smooth Return Collapse back to Baseline Shape
                 let norm = (timeParam - (Math.PI + 0.5)) / Math.PI;
-                wave2 = Math.sin(norm * Math.PI) * 0.7; 
-            } 
-            else if (timeParam >= Math.PI * 2 + 0.5 && timeParam < Math.PI * 3 + 0.5) {
-                // Segment D: Unified Homebound Assembly Pullback
-                let norm = (timeParam - (Math.PI * 2 + 0.5)) / Math.PI;
-                wave1 = Math.cos(norm * (Math.PI / 2));
-                wave2 = 0;
+                easeParam = Math.cos(norm * (Math.PI / 2));
             }
             else {
-                // Segment E: New 1.0 Second Anchor Break Rest State at Home Position
-                wave1 = 0;
-                wave2 = 0;
+                // Segment D: 1.0 Second Rest State Pause before re-triggering next cycle
+                easeParam = 0;
             }
 
             for (let i = 0; i < vectorElements.length; i++) {
                 const el = vectorElements[i];
                 ctx.lineWidth = el.lineWidth;
 
-                let localizedWave2Weight = Math.max(0.2, el.proximity);
-                let totalEase = (wave1 * el.speedModifier) + (wave2 * localizedWave2Weight * el.speedModifier);
-
-                let currentShift = el.shiftX * totalEase;
+                // Scale shift vectors with uniform frame easing properties
+                let totalEase = easeParam * el.speedModifier;
+                
+                let currentShiftX = el.shiftX * totalEase;
+                let currentShiftY = el.shiftY * totalEase; // Apply vertical ease shift
                 let currentMorph = el.morph * totalEase;
 
                 let origCenterX = el.homeX1 + (el.homeX2 - el.homeX1) / 2;
-                let newCenterX = origCenterX + currentShift;
+                let newCenterX = origCenterX + currentShiftX;
+                
+                // New dynamic Y location coordinate position mapping
+                let newCenterY = el.homeY + currentShiftY;
+                
                 let newLength = Math.max(1, (el.homeX2 - el.homeX1) + currentMorph);
 
+                // KEEP THE APPEARANCE HORIZONTAL: 
+                // Keep drawing x1 and x2 on a horizontal plane using the modified newCenterY parameter coordinate.
                 let x1 = newCenterX - newLength / 2;
                 let x2 = newCenterX + newLength / 2;
 
                 if (el.isDot || newLength <= ctx.lineWidth * 0.8) {
                     ctx.beginPath();
-                    ctx.arc(newCenterX, el.y, ctx.lineWidth / 2, 0, Math.PI * 2);
+                    ctx.arc(newCenterX, newCenterY, ctx.lineWidth / 2, 0, Math.PI * 2);
                     ctx.fill();
                 } else {
                     ctx.beginPath();
-                    ctx.moveTo(x1, el.y);
-                    ctx.lineTo(x2, el.y);
+                    ctx.moveTo(x1, newCenterY);
+                    ctx.lineTo(x2, newCenterY);
                     ctx.stroke();
                 }
             }
@@ -521,8 +513,8 @@
             
             timeParam += 0.038; 
             
-            // Core Envelope Loop Boundary Match Condition Check (3 Full PIs + 1.5 Delay Weights)
-            const targetLoopLimit = Math.PI * 3 + 1.5;
+            // Core Single Expansion Loop Limit Boundary Condition Check (2 Full PIs + 1.5 Delay Windows)
+            const targetLoopLimit = Math.PI * 2 + 1.5;
             if (timeParam > targetLoopLimit) {
                 timeParam -= targetLoopLimit; 
                 if (isRecording) {
