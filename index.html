@@ -17,81 +17,73 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 40px 20px;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Split Screen Configuration */
+        .sidebar {
+            width: 360px;
+            min-width: 360px;
+            border-right: 1px solid var(--border-color);
+            background: #fafafa;
+            padding: 40px 30px;
+            box-sizing: border-box;
             display: flex;
             flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .main-preview {
+            flex-grow: 1;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
             align-items: center;
+            padding: 40px;
+            height: 100%;
+            box-sizing: border-box;
         }
 
         header {
-            text-align: center;
-            max-width: 600px;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
 
         h1 {
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             font-weight: 700;
             letter-spacing: -0.05em;
-            margin-bottom: 10px;
+            margin: 0 0 12px 0;
             text-transform: uppercase;
         }
 
         p {
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: #666;
             line-height: 1.5;
+            margin: 0;
         }
 
-        .container {
-            width: 100%;
-            max-width: 850px;
+        .controls-stack {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 30px;
-        }
-
-        .controls {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            background: #fafafa;
-            padding: 24px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .slider-row {
-            display: flex;
-            flex-wrap: wrap;
             gap: 24px;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .button-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            justify-content: center;
-            align-items: center;
-            border-top: 1px solid #eeeeee;
-            padding-top: 16px;
+            margin-bottom: auto;
         }
 
         .control-group {
             display: flex;
             flex-direction: column;
             gap: 8px;
-            min-width: 180px;
         }
 
         label {
-            font-size: 0.8rem;
-            font-weight: 600;
+            font-size: 0.75rem;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
@@ -102,6 +94,7 @@
             height: 4px;
             border-radius: 2px;
             outline: none;
+            width: 100%;
         }
 
         input[type="range"]::-webkit-slider-thumb {
@@ -116,13 +109,14 @@
         .file-upload-btn {
             background: var(--accent-color);
             color: white;
-            padding: 10px 20px;
+            padding: 12px 20px;
             border: none;
             border-radius: 4px;
             font-weight: 600;
             font-size: 0.9rem;
             cursor: pointer;
             transition: background 0.2s;
+            text-align: center;
         }
 
         .file-upload-btn:hover {
@@ -133,36 +127,29 @@
             display: none;
         }
 
-        .output-box {
-            border: 1px solid var(--border-color);
-            background: white;
-            padding: 10px;
+        .button-group {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            max-width: 100%;
-            overflow: auto;
-            min-height: 300px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        canvas {
-            max-width: 100%;
-            height: auto;
-            display: block;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 40px;
+            border-top: 1px solid #eeeeee;
+            padding-top: 24px;
         }
 
         .action-btn {
             background: transparent;
             color: var(--accent-color);
             border: 2px solid var(--accent-color);
-            padding: 10px 20px;
+            padding: 12px 20px;
             border-radius: 4px;
             font-weight: 600;
             font-size: 0.9rem;
             cursor: pointer;
             display: none;
             transition: all 0.2s ease;
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .action-btn:hover {
@@ -186,18 +173,66 @@
             background: #555;
             color: white;
         }
+
+        /* Enhanced Large Preview Box */
+        .output-box {
+            border: 1px solid var(--border-color);
+            background: white;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            max-width: 100%;
+            max-height: 100%;
+            overflow: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: calc(100vh - 120px);
+            object-fit: contain;
+            display: block;
+        }
+
+        /* Responsive Layout Switch for Mobile Views */
+        @media (max-width: 850px) {
+            body {
+                flex-direction: column;
+                overflow: auto;
+                height: auto;
+            }
+            .sidebar {
+                width: 100%;
+                min-width: 100%;
+                height: auto;
+                padding: 30px 20px;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .main-preview {
+                height: auto;
+                min-height: 500px;
+                padding: 20px;
+            }
+            canvas {
+                max-height: 70vh;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>Dot-Dash Image Generator</h1>
-        <p>An interactive dynamic identity platform. Upload an image to generate intertwined rows of dots, micro-dashes, and lines that morph in a synchronized kinetic timeline.</p>
-    </header>
+    <div class="sidebar">
+        <div>
+            <header>
+                <h1>Dot-Dash Image Generator</h1>
+                <p>An interactive dynamic identity platform. Upload artwork to create stylized modular rows that move on a unified kinetic loop.</p>
+            </header>
 
-    <div class="container">
-        <div class="controls">
-            <div class="slider-row">
+            <div class="controls-stack">
                 <div class="control-group">
                     <label for="imageLoader">Select Image</label>
                     <button class="file-upload-btn" onclick="document.getElementById('imageLoader').click()">Choose File</button>
@@ -214,14 +249,16 @@
                     <input type="range" id="contrastThreshold" min="10" max="245" value="128">
                 </div>
             </div>
-            
-            <div class="button-row">
-                <button id="animateBtn" class="action-btn">Animate Motion</button>
-                <button id="downloadBtn" class="action-btn">Download Image</button>
-                <button id="recordBtn" class="action-btn">Download Animation</button>
-            </div>
         </div>
+        
+        <div class="button-group">
+            <button id="animateBtn" class="action-btn">Animate Motion</button>
+            <button id="downloadBtn" class="action-btn">Download Image</button>
+            <button id="recordBtn" class="action-btn">Download Animation</button>
+        </div>
+    </div>
 
+    <div class="main-preview">
         <div class="output-box">
             <canvas id="imageCanvas"></canvas>
         </div>
@@ -412,37 +449,40 @@
             ctx.fillStyle = "#000000";
             ctx.lineCap = "round";
 
-            // SYSTEM REWRITE: COMPOSITED CHRONOLOGICAL TIMELINE (0 to 2PI Loop Window)
-            let wave1 = 0; // Primary overall layout push
-            let wave2 = 0; // Center-weighted accentuation bump
+            let wave1 = 0; 
+            let wave2 = 0; 
 
+            // MATH ENGINE: Segmented timeline with explicit hold state
+            // Total Loop Window mapped cleanly across 0 -> 8.0 units
             if (timeParam < Math.PI) {
-                // Outbound Phase (0 -> PI): Elements unfold smoothly outwards and hold position
-                // We map 0 -> PI to a 0 -> 90 degree sine curve so elements travel out and stop smoothly at max extension
-                let outboundProgress = timeParam / Math.PI; // Linear 0 to 1
-                wave1 = Math.sin(outboundProgress * (Math.PI / 2));
-
-                // The second expansion kicks in halfway through the outward journey (after 45% progress)
-                if (outboundProgress > 0.45) {
-                    let subProgress = (outboundProgress - 0.45) / 0.55; // Normalize 0 to 1
-                    // Secondary smooth surge envelope
-                    wave2 = Math.sin(subProgress * Math.PI);
-                }
-            } else {
-                // Inbound Return Phase (PI -> 2PI): All particles pull back together to home baseline uniformly
-                let inboundProgress = (timeParam - Math.PI) / Math.PI; // Linear 0 to 1
-                // Calculates reverse execution path starting cleanly from the stacked wave thresholds
-                wave1 = Math.cos(inboundProgress * (Math.PI / 2));
-                wave2 = 0; // Decelerates cleanly back to zero
+                // Segment A: Initial Uniform Expansion Outwards
+                let norm = timeParam / Math.PI;
+                wave1 = Math.sin(norm * (Math.PI / 2));
+                wave2 = 0;
+            } 
+            else if (timeParam >= Math.PI && timeParam < Math.PI + 1.0) {
+                // Segment B: The 1-Second Functional Break (Hold Outward State)
+                wave1 = 1;
+                wave2 = 0;
+            } 
+            else if (timeParam >= Math.PI + 1.0 && timeParam < Math.PI * 2 + 1.0) {
+                // Segment C: Secondary Accent Expansion (Uniform Speed Curve Mapping)
+                wave1 = 1;
+                let norm = (timeParam - (Math.PI + 1.0)) / Math.PI;
+                wave2 = Math.sin(norm * Math.PI); // Smooth pulse wave out and back
+            } 
+            else {
+                // Segment D: Return Journey Back to Zero Base Coordinates
+                let norm = (timeParam - (Math.PI * 2 + 1.0)) / Math.PI;
+                wave1 = Math.cos(norm * (Math.PI / 2));
+                wave2 = 0;
             }
 
             for (let i = 0; i < vectorElements.length; i++) {
                 const el = vectorElements[i];
                 ctx.lineWidth = el.lineWidth;
 
-                // Base motion applies to all elements.
-                // The center expansion (wave2) influences particles closer to the core much heavier, 
-                // while peripheral pieces receive a subtle secondary accentuation push (0.2 minimum weight multiplier).
+                // Combined acceleration structure utilizing identical speed modification attributes
                 let localizedWave2Weight = Math.max(0.2, el.proximity);
                 let totalEase = (wave1 * el.speedModifier) + (wave2 * localizedWave2Weight * el.speedModifier * 0.4);
 
@@ -490,10 +530,12 @@
         function tick() {
             if (!isAnimating && !isRecording) return;
             
-            // Execution speed parameter
-            timeParam += 0.035; 
-            if (timeParam > Math.PI * 2) {
-                timeParam -= Math.PI * 2; 
+            // Adjust step value to scale global loop speed uniformly
+            timeParam += 0.038; 
+            
+            // Close condition boundary check (3 Full PI iterations + 1.0 unit delay value)
+            if (timeParam > Math.PI * 3 + 1.0) {
+                timeParam -= (Math.PI * 3 + 1.0); 
                 if (isRecording) {
                     mediaRecorder.stop();
                     isRecording = false;
