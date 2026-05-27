@@ -215,7 +215,7 @@
         <div>
             <header>
                 <h1>Dot-Dash Image Generator</h1>
-                <p>An interactive dynamic identity platform. Upload artwork to create stylized modular rows that burst outwards in a clean, geometric horizontal matrix.</p>
+                <p>An interactive dynamic identity platform. Upload artwork to create stylized modular rows that burst horizontally and vertically in an alternating sequence.</p>
             </header>
 
             <div class="controls-stack">
@@ -398,17 +398,18 @@
         function registerElement(startX, endX, y, rowSpacing, forcedDot) {
             if (endX <= startX) return;
 
-            // Pure parallel tracking: Keep shift vector strictly mapped along horizontal track coordinates
             const maxShiftX = (Math.random() - 0.5) * (canvas.width * 0.35); 
+            const maxShiftY = (Math.random() - 0.5) * (canvas.height * 0.25);
             let morphDelta = (Math.random() - 0.5) * (rowSpacing * 3.5);
 
             vectorElements.push({
                 homeX1: startX,
                 homeX2: endX,
-                y: y, 
+                homeY: y, 
                 lineWidth: rowSpacing * 0.55,
                 isDot: forcedDot,
                 shiftX: maxShiftX,
+                shiftY: maxShiftY,
                 morph: morphDelta,
                 speedModifier: 0.5 + Math.random() * 0.5 
             });
@@ -422,53 +423,76 @@
             ctx.fillStyle = "#000000";
             ctx.lineCap = "round";
 
-            let easeParam = 0; 
+            let easeX = 0; 
+            let easeY = 0; 
 
-            // GEOMETRIC SINGLE EXPANSION TIMELINE ENVELOPE
-            if (timeParam < Math.PI) {
-                // Segment A: Linear Sweep Outward
-                let norm = timeParam / Math.PI;
-                easeParam = Math.sin(norm * (Math.PI / 2));
+            // THE TWO-PHASE ALTERNATING KINETIC MATRIX TIMELINE
+            // Each complete loop splits into phase segments mapping distinct transformations
+            const phaseLength = Math.PI * 2 + 1.5; // Single complete loop window length (out, hold, back, rest)
+
+            if (timeParam < phaseLength) {
+                // PHASE 1: PURE HORIZONTAL EXPANSION ENGINE
+                let subTime = timeParam;
+                if (subTime < Math.PI) {
+                    let norm = subTime / Math.PI;
+                    easeX = Math.sin(norm * (Math.PI / 2));
+                } else if (subTime >= Math.PI && subTime < Math.PI + 0.5) {
+                    easeX = 1;
+                } else if (subTime >= Math.PI + 0.5 && subTime < Math.PI * 2 + 0.5) {
+                    let norm = (subTime - (Math.PI + 0.5)) / Math.PI;
+                    easeX = Math.cos(norm * (Math.PI / 2));
+                } else {
+                    easeX = 0;
+                }
+                easeY = 0; // Lock vertical axis entirely
             } 
-            else if (timeParam >= Math.PI && timeParam < Math.PI + 0.5) {
-                // Segment B: 0.5 Second Technical Hold State Pause
-                easeParam = 1;
-            } 
-            else if (timeParam >= Math.PI + 0.5 && timeParam < Math.PI * 2 + 0.5) {
-                // Segment C: Unified Linear Snap Inward
-                let norm = (timeParam - (Math.PI + 0.5)) / Math.PI;
-                easeParam = Math.cos(norm * (Math.PI / 2));
-            }
             else {
-                // Segment D: 1.0 Second Rest State Pause before cycling
-                easeParam = 0;
+                // PHASE 2: PURE VERTICAL EXPANSION ENGINE
+                let subTime = timeParam - phaseLength; // Normalize to local time window
+                if (subTime < Math.PI) {
+                    let norm = subTime / Math.PI;
+                    easeY = Math.sin(norm * (Math.PI / 2));
+                } else if (subTime >= Math.PI && subTime < Math.PI + 0.5) {
+                    easeY = 1;
+                } else if (subTime >= Math.PI + 0.5 && subTime < Math.PI * 2 + 0.5) {
+                    let norm = (subTime - (Math.PI + 0.5)) / Math.PI;
+                    easeY = Math.cos(norm * (Math.PI / 2));
+                } else {
+                    easeY = 0;
+                }
+                easeX = 0; // Lock horizontal axis entirely
             }
 
             for (let i = 0; i < vectorElements.length; i++) {
                 const el = vectorElements[i];
                 ctx.lineWidth = el.lineWidth;
 
-                let totalEase = easeParam * el.speedModifier;
+                // Modulate individual vectors relative to independent axes constraints
+                let totalEaseX = easeX * el.speedModifier;
+                let totalEaseY = easeY * el.speedModifier;
                 
-                let currentShiftX = el.shiftX * totalEase;
-                let currentMorph = el.morph * totalEase;
+                let currentShiftX = el.shiftX * totalEaseX;
+                let currentShiftY = el.shiftY * totalEaseY;
+                let currentMorph = el.morph * totalEaseX; // Morph only scales during horizontal motion
 
                 let origCenterX = el.homeX1 + (el.homeX2 - el.homeX1) / 2;
                 let newCenterX = origCenterX + currentShiftX;
+                let newCenterY = el.homeY + currentShiftY;
+                
                 let newLength = Math.max(1, (el.homeX2 - el.homeX1) + currentMorph);
 
-                // Locked strict horizontal drawing layout coordinate tracks
+                // DRAW METICULOUS GEOMETRIC LINES (Locked Strict Horizontal Alignments)
                 let x1 = newCenterX - newLength / 2;
                 let x2 = newCenterX + newLength / 2;
 
                 if (el.isDot || newLength <= ctx.lineWidth * 0.8) {
                     ctx.beginPath();
-                    ctx.arc(newCenterX, el.y, ctx.lineWidth / 2, 0, Math.PI * 2);
+                    ctx.arc(newCenterX, newCenterY, ctx.lineWidth / 2, 0, Math.PI * 2);
                     ctx.fill();
                 } else {
                     ctx.beginPath();
-                    ctx.moveTo(x1, el.y);
-                    ctx.lineTo(x2, el.y);
+                    ctx.moveTo(x1, newCenterY);
+                    ctx.lineTo(x2, newCenterY);
                     ctx.stroke();
                 }
             }
@@ -497,9 +521,10 @@
             
             timeParam += 0.038; 
             
-            const targetLoopLimit = Math.PI * 2 + 1.5;
-            if (timeParam > targetLoopLimit) {
-                timeParam -= targetLoopLimit; 
+            // Loop Boundary: 2 complete phase cycles stacked end-to-end
+            const totalCycleLimit = (Math.PI * 2 + 1.5) * 2;
+            if (timeParam > totalCycleLimit) {
+                timeParam -= totalCycleLimit; 
                 if (isRecording) {
                     mediaRecorder.stop();
                     isRecording = false;
