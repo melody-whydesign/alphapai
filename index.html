@@ -179,7 +179,7 @@
         canvas {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Keeps strict aspect ratio layout while maxing out screen space */
+            object-fit: contain;
             display: block;
         }
 
@@ -272,7 +272,6 @@
         animateBtn.addEventListener('click', toggleAnimation);
         recordBtn.addEventListener('click', startRecordingLoop);
 
-        // Resize observer to auto-recalculate canvas grid crispness on window resizing
         window.addEventListener('resize', () => {
             if (originalImage) {
                 stopAnimation();
@@ -298,7 +297,6 @@
             reader.readAsDataURL(e.target.files[0]);
         }
 
-        // NEW: Layout math calculates full-screen bounds while honoring source aspect proportions
         function setupCanvasDimensions() {
             if (!originalImage) return;
 
@@ -309,7 +307,6 @@
 
             let canvasWidth, canvasHeight;
 
-            // Fit shape cleanly inside viewport space boundaries 
             if (imageRatio > containerRatio) {
                 canvasWidth = targetWidth;
                 canvasHeight = targetWidth / imageRatio;
@@ -318,7 +315,6 @@
                 canvasWidth = targetHeight * imageRatio;
             }
 
-            // Lock physical canvas internal resolutions to matching calculated dimensions
             canvas.width = Math.floor(canvasWidth);
             canvas.height = Math.floor(canvasHeight);
         }
@@ -369,45 +365,58 @@
             render(); 
         }
 
+        // IMPROVED ARCHITECTURAL RANDOM SHATTER ENGINE
         function segmentShatter(startX, endX, y, rowSpacing) {
             let currentX = startX;
             const totalWidth = endX - startX;
-            const baseGap = Math.max(3, rowSpacing * 0.35);
 
+            // Simple micro segments instantly render as dots
             if (totalWidth <= rowSpacing * 0.6) {
                 registerElement(startX, endX, y, rowSpacing, true);
                 return;
             }
 
             const dotSize = Math.max(2, rowSpacing * 0.2);
-            const microDashSize = rowSpacing * 0.7; 
-            const standardDashSize = rowSpacing * 1.8; 
-
-            let alternateCounter = 0;
+            
+            // Dynamic scale distributions
+            const shortDashMin = rowSpacing * 0.5;
+            const shortDashMax = rowSpacing * 1.0;
+            const longDashMin = rowSpacing * 2.0;
+            const longDashMax = rowSpacing * 5.5;
 
             while (currentX < endX) {
                 let remaining = endX - currentX;
 
-                if (remaining < dotSize) {
-                    break;
-                }
+                if (remaining < dotSize) break;
 
-                let selectionMode = alternateCounter % 3;
-                alternateCounter++;
+                // Completely unpredictable multi-tier geometric selector choice
+                const randType = Math.random();
+                let chosenSize = dotSize;
+                let isForcedDot = false;
 
-                if (selectionMode === 0 || remaining < microDashSize) {
-                    let targetX = Math.min(endX, currentX + dotSize);
-                    registerElement(currentX, targetX, y, rowSpacing, true);
-                    currentX = targetX + baseGap;
-                } else if (selectionMode === 1 || remaining < standardDashSize) {
-                    let targetX = Math.min(endX, currentX + microDashSize);
-                    registerElement(currentX, targetX, y, rowSpacing, false);
-                    currentX = targetX + baseGap;
+                if (randType < 0.40) {
+                    // Type A: Perfect Circular Dot Node
+                    chosenSize = dotSize;
+                    isForcedDot = true;
+                } else if (randType < 0.75) {
+                    // Type B: Short Dynamic Dash Element
+                    chosenSize = shortDashMin + Math.random() * (shortDashMax - shortDashMin);
+                    isForcedDot = false;
                 } else {
-                    let targetX = Math.min(endX, currentX + standardDashSize);
-                    registerElement(currentX, targetX, y, rowSpacing, false);
-                    currentX = targetX + baseGap;
+                    // Type C: Long Technical Data Block Stripe
+                    chosenSize = longDashMin + Math.random() * (longDashMax - longDashMin);
+                    isForcedDot = false;
                 }
+
+                // Constrain dimension to available drawing window track space bounds
+                let targetX = Math.min(endX, currentX + chosenSize);
+                registerElement(currentX, targetX, y, rowSpacing, isForcedDot);
+
+                // Geometric spacing intervals completely independent of sequential loop counters
+                const randomGapMultiplier = 0.25 + Math.random() * 0.45;
+                const dynamicGap = Math.max(3, rowSpacing * randomGapMultiplier);
+                
+                currentX = targetX + dynamicGap;
             }
         }
 
