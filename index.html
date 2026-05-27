@@ -192,7 +192,7 @@
 
     <header>
         <h1>Dot-Dash Image Generator</h1>
-        <p>An interactive dynamic identity platform. Upload an image to generate intertwined rows of dots and dashes that morph in a fluid kinetic timeline.</p>
+        <p>An interactive dynamic identity platform. Upload an image to generate intertwined rows of dots, micro-dashes, and lines that morph in a dual-stage kinetic timeline.</p>
     </header>
 
     <div class="container">
@@ -241,7 +241,7 @@
         let vectorElements = []; 
         let animationFrameId = null;
         let isAnimating = false;
-        let timeParam = 0; // Continuous growing tracker for loop
+        let timeParam = 0; 
 
         // Recording parameters
         let mediaRecorder = null;
@@ -303,7 +303,6 @@
             
             vectorElements = []; 
 
-            // Hard clamp math grid boundaries to ensure no line positions are dropped
             for (let y = Math.floor(rowSpacing / 2); y < canvas.height; y += rowSpacing) {
                 let inDrawingSegment = false;
                 let segmentStartX = 0;
@@ -333,23 +332,20 @@
             render(); 
         }
 
-        // Breaks solid areas down to achieve an interleaved 50/50 dot-dash distribution pattern
         function segmentShatter(startX, endX, y, rowSpacing) {
             let currentX = startX;
             const totalWidth = endX - startX;
             const baseGap = Math.max(3, rowSpacing * 0.35);
 
-            // If the chunk is naturally tiny, just turn it directly into an isolated dot
             if (totalWidth <= rowSpacing * 0.5) {
                 registerElement(startX, endX, y, rowSpacing, true);
                 return;
             }
 
-            // Slice block systematically to interleave dots and dashes 
             while (currentX < endX) {
                 let remaining = endX - currentX;
                 
-                // Generative coin toss determines if the next item is a dot or a dash
+                // 50/50 toss to choose between placing a circle dot or a line dash
                 let spawnDot = Math.random() > 0.5;
 
                 if (spawnDot || remaining < rowSpacing) {
@@ -357,11 +353,20 @@
                     registerElement(currentX, Math.min(endX, currentX + dotWidth), y, rowSpacing, true);
                     currentX += dotWidth + baseGap;
                 } else {
-                    // Generate variable dash lengths so rows don't look completely rigid
-                    let dashWidth = rowSpacing * (1.5 + Math.random() * 2.5);
+                    // UPDATED DASH ENGINE:
+                    // Randomly select between a micro-dash (width of ~2 dots) and a standard medium dash.
+                    // This limits massive lines and injects heavy asymmetry.
+                    let dashWidth;
+                    if (Math.random() > 0.4) {
+                        // Micro-dash option (approx 0.6 to 1.2x line spacing width)
+                        dashWidth = rowSpacing * (0.6 + Math.random() * 0.6);
+                    } else {
+                        // Regular medium dash option
+                        dashWidth = rowSpacing * (1.5 + Math.random() * 1.5);
+                    }
+
                     let targetEndX = Math.min(endX, currentX + dashWidth);
                     
-                    // Guard against leaving weird slivers at the end edge
                     if (endX - targetEndX < baseGap + 2) {
                         targetEndX = endX;
                     }
@@ -373,9 +378,20 @@
         }
 
         function registerElement(startX, endX, y, rowSpacing, forcedDot) {
-            const maxShiftX = (Math.random() - 0.5) * (canvas.width * 0.3); 
-            let morphDelta = (Math.random() - 0.5) * (rowSpacing * 3);
+            const maxShiftX = (Math.random() - 0.5) * (canvas.width * 0.35); 
+            let morphDelta = (Math.random() - 0.5) * (rowSpacing * 3.5);
             
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const elementCenterX = startX + (endX - startX) / 2;
+            
+            const distY = y - centerY;
+            const distX = elementCenterX - centerX;
+            const distanceToCenter = Math.sqrt(distX * distX + distY * distY);
+            const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
+            
+            const centerProximity = Math.max(0, 1 - (distanceToCenter / (maxRadius * 0.65)));
+
             vectorElements.push({
                 homeX1: startX,
                 homeX2: endX,
@@ -384,6 +400,7 @@
                 isDot: forcedDot,
                 shiftX: maxShiftX,
                 morph: morphDelta,
+                proximity: centerProximity, 
                 speedModifier: 0.5 + Math.random() * 0.5 
             });
         }
@@ -396,15 +413,23 @@
             ctx.fillStyle = "#000000";
             ctx.lineCap = "round";
 
-            // Cosine wave converts timeParam to an ultra smooth value between 0 and 1 with no linear edge stops
-            let globalEase = 0.5 - 0.5 * Math.cos(timeParam);
+            let wave1 = 0;
+            let wave2 = 0;
+            
+            if (timeParam < Math.PI) {
+                wave1 = Math.sin(timeParam); 
+            } else {
+                wave2 = Math.sin(timeParam - Math.PI);
+            }
 
             for (let i = 0; i < vectorElements.length; i++) {
                 const el = vectorElements[i];
                 ctx.lineWidth = el.lineWidth;
 
-                let currentShift = el.shiftX * globalEase * el.speedModifier;
-                let currentMorph = el.morph * globalEase * el.speedModifier;
+                let totalEase = (wave1 * el.speedModifier) + (wave2 * el.proximity * el.speedModifier * 0.85);
+
+                let currentShift = el.shiftX * totalEase;
+                let currentMorph = el.morph * totalEase;
 
                 let origCenterX = el.homeX1 + (el.homeX2 - el.homeX1) / 2;
                 let newCenterX = origCenterX + currentShift;
@@ -413,7 +438,6 @@
                 let x1 = newCenterX - newLength / 2;
                 let x2 = newCenterX + newLength / 2;
 
-                // Dynamic draw assignment
                 if (el.isDot || newLength <= ctx.lineWidth * 0.8) {
                     ctx.beginPath();
                     ctx.arc(newCenterX, el.y, ctx.lineWidth / 2, 0, Math.PI * 2);
@@ -448,11 +472,9 @@
         function tick() {
             if (!isAnimating && !isRecording) return;
             
-            // Increment the angle cleanly for smooth animation flow
-            timeParam += 0.025; 
+            timeParam += 0.04; 
             if (timeParam > Math.PI * 2) {
                 timeParam -= Math.PI * 2; 
-                // Automatically close out video rendering loop once a complete round cycle resolves
                 if (isRecording) {
                     mediaRecorder.stop();
                     isRecording = false;
@@ -466,17 +488,16 @@
             }
         }
 
-        // Automated Video Export Module 
         function startRecordingLoop() {
             if (isRecording) return;
             
             stopAnimation();
             isRecording = true;
             recordedChunks = [];
-            timeParam = 0; // Sync start sequence exactly at original rest position
+            timeParam = 0; 
             recordBtn.innerText = "Recording...";
 
-            const stream = canvas.captureStream(30); // Capture viewport at 30FPS
+            const stream = canvas.captureStream(30); 
             mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
 
             mediaRecorder.ondataavailable = function(e) {
@@ -495,7 +516,7 @@
             };
 
             mediaRecorder.start();
-            tick(); // Fire rendering timeline sequence
+            tick(); 
         }
 
         downloadBtn.addEventListener('click', () => {
