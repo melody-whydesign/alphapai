@@ -23,7 +23,7 @@
             overflow: hidden;
         }
 
-        /* Split Screen Configuration */
+        /* Left Control Panel */
         .sidebar {
             width: 360px;
             min-width: 360px;
@@ -33,11 +33,11 @@
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
             height: 100%;
             overflow-y: auto;
         }
 
+        /* Immersive Right Viewport Area */
         .main-preview {
             flex-grow: 1;
             background: #f0f0f0;
@@ -72,7 +72,6 @@
             display: flex;
             flex-direction: column;
             gap: 24px;
-            margin-bottom: auto;
         }
 
         .control-group {
@@ -127,11 +126,12 @@
             display: none;
         }
 
+        /* Relocated Button Stack Block */
         .button-group {
             display: flex;
             flex-direction: column;
             gap: 10px;
-            margin-top: 40px;
+            margin-top: 32px;
             border-top: 1px solid #eeeeee;
             padding-top: 24px;
         }
@@ -174,30 +174,17 @@
             color: white;
         }
 
-        /* Enhanced Large Preview Box */
-        .output-box {
-            border: 1px solid var(--border-color);
-            background: white;
-            padding: 15px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            max-width: 100%;
-            max-height: 100%;
-            overflow: auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-
+        /* Seamless Floating Canvas Output Setup */
         canvas {
             max-width: 100%;
-            max-height: calc(100vh - 120px);
+            max-height: calc(100vh - 80px);
             object-fit: contain;
             display: block;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.06);
+            border-radius: 2px;
         }
 
-        /* Responsive Layout Switch for Mobile Views */
+        /* Mobile Viewport Management Overrides */
         @media (max-width: 850px) {
             body {
                 flex-direction: column;
@@ -249,19 +236,17 @@
                     <input type="range" id="contrastThreshold" min="10" max="245" value="128">
                 </div>
             </div>
-        </div>
-        
-        <div class="button-group">
-            <button id="animateBtn" class="action-btn">Animate Motion</button>
-            <button id="downloadBtn" class="action-btn">Download Image</button>
-            <button id="recordBtn" class="action-btn">Download Animation</button>
+            
+            <div class="button-group">
+                <button id="animateBtn" class="action-btn">Animate Motion</button>
+                <button id="downloadBtn" class="action-btn">Download Image</button>
+                <button id="recordBtn" class="action-btn">Download Animation</button>
+            </div>
         </div>
     </div>
 
     <div class="main-preview">
-        <div class="output-box">
-            <canvas id="imageCanvas"></canvas>
-        </div>
+        <canvas id="imageCanvas"></canvas>
     </div>
 
     <script>
@@ -280,7 +265,7 @@
         let isAnimating = false;
         let timeParam = 0; 
 
-        // Recording parameters
+        // Recording variables
         let mediaRecorder = null;
         let recordedChunks = [];
         let isRecording = false;
@@ -452,29 +437,34 @@
             let wave1 = 0; 
             let wave2 = 0; 
 
-            // MATH ENGINE: Segmented timeline with explicit hold state
-            // Total Loop Window mapped cleanly across 0 -> 8.0 units
+            // THE GENERATIVE KINETIC ENGINE
+            // Partition boundaries to build structural holds and variations smoothly
             if (timeParam < Math.PI) {
-                // Segment A: Initial Uniform Expansion Outwards
+                // Segment A: Uniform Expansion Outward
                 let norm = timeParam / Math.PI;
                 wave1 = Math.sin(norm * (Math.PI / 2));
                 wave2 = 0;
             } 
-            else if (timeParam >= Math.PI && timeParam < Math.PI + 1.0) {
-                // Segment B: The 1-Second Functional Break (Hold Outward State)
+            else if (timeParam >= Math.PI && timeParam < Math.PI + 0.5) {
+                // Segment B: Updated 0.5 Second Mid-Break Hold
                 wave1 = 1;
                 wave2 = 0;
             } 
-            else if (timeParam >= Math.PI + 1.0 && timeParam < Math.PI * 2 + 1.0) {
-                // Segment C: Secondary Accent Expansion (Uniform Speed Curve Mapping)
+            else if (timeParam >= Math.PI + 0.5 && timeParam < Math.PI * 2 + 0.5) {
+                // Segment C: Secondary Accent Surge (Amplified to 0.7 intensity value)
                 wave1 = 1;
-                let norm = (timeParam - (Math.PI + 1.0)) / Math.PI;
-                wave2 = Math.sin(norm * Math.PI); // Smooth pulse wave out and back
+                let norm = (timeParam - (Math.PI + 0.5)) / Math.PI;
+                wave2 = Math.sin(norm * Math.PI) * 0.7; 
             } 
-            else {
-                // Segment D: Return Journey Back to Zero Base Coordinates
-                let norm = (timeParam - (Math.PI * 2 + 1.0)) / Math.PI;
+            else if (timeParam >= Math.PI * 2 + 0.5 && timeParam < Math.PI * 3 + 0.5) {
+                // Segment D: Unified Homebound Assembly Pullback
+                let norm = (timeParam - (Math.PI * 2 + 0.5)) / Math.PI;
                 wave1 = Math.cos(norm * (Math.PI / 2));
+                wave2 = 0;
+            }
+            else {
+                // Segment E: New 1.0 Second Anchor Break Rest State at Home Position
+                wave1 = 0;
                 wave2 = 0;
             }
 
@@ -482,9 +472,8 @@
                 const el = vectorElements[i];
                 ctx.lineWidth = el.lineWidth;
 
-                // Combined acceleration structure utilizing identical speed modification attributes
                 let localizedWave2Weight = Math.max(0.2, el.proximity);
-                let totalEase = (wave1 * el.speedModifier) + (wave2 * localizedWave2Weight * el.speedModifier * 0.4);
+                let totalEase = (wave1 * el.speedModifier) + (wave2 * localizedWave2Weight * el.speedModifier);
 
                 let currentShift = el.shiftX * totalEase;
                 let currentMorph = el.morph * totalEase;
@@ -530,12 +519,12 @@
         function tick() {
             if (!isAnimating && !isRecording) return;
             
-            // Adjust step value to scale global loop speed uniformly
             timeParam += 0.038; 
             
-            // Close condition boundary check (3 Full PI iterations + 1.0 unit delay value)
-            if (timeParam > Math.PI * 3 + 1.0) {
-                timeParam -= (Math.PI * 3 + 1.0); 
+            // Core Envelope Loop Boundary Match Condition Check (3 Full PIs + 1.5 Delay Weights)
+            const targetLoopLimit = Math.PI * 3 + 1.5;
+            if (timeParam > targetLoopLimit) {
+                timeParam -= targetLoopLimit; 
                 if (isRecording) {
                     mediaRecorder.stop();
                     isRecording = false;
