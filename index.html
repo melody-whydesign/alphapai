@@ -23,7 +23,7 @@
             overflow: hidden;
         }
 
-        /* Left Control Panel */
+        /* Fixed Left Control Panel */
         .sidebar {
             width: 360px;
             min-width: 360px;
@@ -35,18 +35,20 @@
             flex-direction: column;
             height: 100%;
             overflow-y: auto;
+            z-index: 10;
         }
 
-        /* Immersive Right Viewport Area */
+        /* Full Screen Right Viewport Area */
         .main-preview {
             flex-grow: 1;
             background: #f0f0f0;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 40px;
             height: 100%;
             box-sizing: border-box;
+            overflow: hidden;
+            position: relative;
         }
 
         header {
@@ -173,17 +175,15 @@
             color: white;
         }
 
-        /* Seamless Floating Canvas Output Setup */
+        /* Fully Responsive Canvas Optimization */
         canvas {
-            max-width: 100%;
-            max-height: calc(100vh - 80px);
-            object-fit: contain;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Keeps strict aspect ratio layout while maxing out screen space */
             display: block;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.06);
-            border-radius: 2px;
         }
 
-        /* Mobile Viewport Management Overrides */
+        /* Mobile Layout Fallback */
         @media (max-width: 850px) {
             body {
                 flex-direction: column;
@@ -199,12 +199,8 @@
                 border-bottom: 1px solid var(--border-color);
             }
             .main-preview {
-                height: auto;
-                min-height: 500px;
-                padding: 20px;
-            }
-            canvas {
-                max-height: 70vh;
+                height: 70vh;
+                min-height: 400px;
             }
         }
     </style>
@@ -244,13 +240,14 @@
         </div>
     </div>
 
-    <div class="main-preview">
+    <div class="main-preview" id="previewContainer">
         <canvas id="imageCanvas"></canvas>
     </div>
 
     <script>
         const imageLoader = document.getElementById('imageLoader');
         const canvas = document.getElementById('imageCanvas');
+        const container = document.getElementById('previewContainer');
         const ctx = canvas.getContext('2d');
         const lhSlider = document.getElementById('lineHeightSlider');
         const contrastSlider = document.getElementById('contrastThreshold');
@@ -275,28 +272,22 @@
         animateBtn.addEventListener('click', toggleAnimation);
         recordBtn.addEventListener('click', startRecordingLoop);
 
+        // Resize observer to auto-recalculate canvas grid crispness on window resizing
+        window.addEventListener('resize', () => {
+            if (originalImage) {
+                stopAnimation();
+                setupCanvasDimensions();
+                processImage();
+            }
+        });
+
         function handleImage(e) {
             const reader = new FileReader();
             reader.onload = function(event) {
                 originalImage = new Image();
                 originalImage.onload = function() {
-                    const maxDim = 1000; 
-                    let width = originalImage.width;
-                    let height = originalImage.height;
-
-                    if (width > maxDim || height > maxDim) {
-                        if (width > height) {
-                            height *= maxDim / width;
-                            width = maxDim;
-                        } else {
-                            width *= maxDim / height;
-                            height = maxDim;
-                        }
-                    }
-
-                    canvas.width = Math.floor(width);
-                    canvas.height = Math.floor(height);
                     stopAnimation();
+                    setupCanvasDimensions();
                     processImage();
                     downloadBtn.style.display = 'block';
                     animateBtn.style.display = 'block';
@@ -305,6 +296,31 @@
                 originalImage.src = event.target.result;
             }
             reader.readAsDataURL(e.target.files[0]);
+        }
+
+        // NEW: Layout math calculates full-screen bounds while honoring source aspect proportions
+        function setupCanvasDimensions() {
+            if (!originalImage) return;
+
+            const targetWidth = container.clientWidth;
+            const targetHeight = container.clientHeight;
+            const imageRatio = originalImage.width / originalImage.height;
+            const containerRatio = targetWidth / targetHeight;
+
+            let canvasWidth, canvasHeight;
+
+            // Fit shape cleanly inside viewport space boundaries 
+            if (imageRatio > containerRatio) {
+                canvasWidth = targetWidth;
+                canvasHeight = targetWidth / imageRatio;
+            } else {
+                canvasHeight = targetHeight;
+                canvasWidth = targetHeight * imageRatio;
+            }
+
+            // Lock physical canvas internal resolutions to matching calculated dimensions
+            canvas.width = Math.floor(canvasWidth);
+            canvas.height = Math.floor(canvasHeight);
         }
 
         function processImage() {
@@ -426,12 +442,10 @@
             let easeX = 0; 
             let easeY = 0; 
 
-            // THE TWO-PHASE ALTERNATING KINETIC MATRIX TIMELINE
-            // Each complete loop splits into phase segments mapping distinct transformations
-            const phaseLength = Math.PI * 2 + 1.5; // Single complete loop window length (out, hold, back, rest)
+            const phaseLength = Math.PI * 2 + 1.5; 
 
             if (timeParam < phaseLength) {
-                // PHASE 1: PURE HORIZONTAL EXPANSION ENGINE
+                // PHASE 1: HORIZONTAL
                 let subTime = timeParam;
                 if (subTime < Math.PI) {
                     let norm = subTime / Math.PI;
@@ -444,11 +458,11 @@
                 } else {
                     easeX = 0;
                 }
-                easeY = 0; // Lock vertical axis entirely
+                easeY = 0;
             } 
             else {
-                // PHASE 2: PURE VERTICAL EXPANSION ENGINE
-                let subTime = timeParam - phaseLength; // Normalize to local time window
+                // PHASE 2: VERTICAL
+                let subTime = timeParam - phaseLength; 
                 if (subTime < Math.PI) {
                     let norm = subTime / Math.PI;
                     easeY = Math.sin(norm * (Math.PI / 2));
@@ -460,20 +474,19 @@
                 } else {
                     easeY = 0;
                 }
-                easeX = 0; // Lock horizontal axis entirely
+                easeX = 0;
             }
 
             for (let i = 0; i < vectorElements.length; i++) {
                 const el = vectorElements[i];
                 ctx.lineWidth = el.lineWidth;
 
-                // Modulate individual vectors relative to independent axes constraints
                 let totalEaseX = easeX * el.speedModifier;
                 let totalEaseY = easeY * el.speedModifier;
                 
                 let currentShiftX = el.shiftX * totalEaseX;
                 let currentShiftY = el.shiftY * totalEaseY;
-                let currentMorph = el.morph * totalEaseX; // Morph only scales during horizontal motion
+                let currentMorph = el.morph * totalEaseX;
 
                 let origCenterX = el.homeX1 + (el.homeX2 - el.homeX1) / 2;
                 let newCenterX = origCenterX + currentShiftX;
@@ -481,7 +494,6 @@
                 
                 let newLength = Math.max(1, (el.homeX2 - el.homeX1) + currentMorph);
 
-                // DRAW METICULOUS GEOMETRIC LINES (Locked Strict Horizontal Alignments)
                 let x1 = newCenterX - newLength / 2;
                 let x2 = newCenterX + newLength / 2;
 
@@ -521,7 +533,6 @@
             
             timeParam += 0.038; 
             
-            // Loop Boundary: 2 complete phase cycles stacked end-to-end
             const totalCycleLimit = (Math.PI * 2 + 1.5) * 2;
             if (timeParam > totalCycleLimit) {
                 timeParam -= totalCycleLimit; 
